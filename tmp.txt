@@ -1,0 +1,47 @@
+                          <p className="text-xl font-black text-gray-800">KSh {stats.totalRevenue}</p>
+                          <p className="text-xl font-black text-gray-800">KSh {stats.totalProfit}</p>
+                            <Line type="monotone" dataKey="sales" name="Sales (KSh)" stroke="#f472b6" strokeWidth={3} dot={{ fill: '#f472b6', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                            <Line type="monotone" dataKey="profit" name="Profit (KSh)" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                            <p className="text-xl font-black text-gray-700">KSh {dailyTotals.cash}</p>
+                            <p className="text-xl font-black text-gray-700">KSh {dailyTotals.mpesa}</p>
+                            <p className="text-xl font-black">KSh {dailyTotals.total}</p>
+                            <p className="text-xl font-black">KSh {dailyTotals.profit}</p>
+                                  <p className="text-sm font-black text-pink-600">KSh {data.total}</p>
+                         KSh {dailyTotals.total}
+                            <p className="text-lg font-black text-gray-700">KSh {dailyTotals.cash}</p>
+                            <p className="text-lg font-black text-gray-700">KSh {dailyTotals.mpesa}</p>
+                            <p className="text-lg font-black text-pink-600">KSh {product.sellingPrice}</p>
+                        <p className="text-xs font-black text-pink-600">KSh {total}</p>
+                        <p className="text-[10px] font-bold text-emerald-500">+KSh {profit}</p>
+                            <td className="px-6 py-4 text-sm font-black text-pink-600">KSh {sale.sellingPrice * sale.quantity}</td>
+                            <td className="px-6 py-4 text-xs font-bold text-red-500">{sale.discount ? `-KSh ${sale.discount}` : '-'}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-emerald-500">+KSh {sale.profit}</td>
+                    <p className="text-3xl font-black text-emerald-600">KSh {dailyTotals.profit}</p>
+                    <p className="text-3xl font-black text-pink-600">KSh {weeklyTotals.profit}</p>
+                                <span>KSh {highestProfitProduct.sellingPrice - highestProfitProduct.lastPrice} profit/unit</span>
+                            <td className="px-6 py-4 text-sm text-gray-500">KSh {product.lastPrice}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-pink-600">KSh {product.sellingPrice}</td>
+                            <td className="px-6 py-4 text-sm font-bold text-emerald-600">KSh {product.sellingPrice - product.lastPrice}</td>
+                          <td className="px-6 py-4 text-sm font-bold text-pink-600">KSh {sale.sellingPrice * sale.quantity}</td>
+                          <td className="px-6 py-4 text-xs font-bold text-red-500">{sale.discount ? `-KSh ${sale.discount}` : '-'}</td>
+                              <p className="text-[10px] text-gray-400 mt-1">Paid: KSh {sale.amountPaid}</p>
+                            <td className="px-6 py-4 text-sm font-bold text-emerald-500">+KSh {sale.profit}</td>
+                    <span className="text-lg font-black text-gray-700">KSh {dailyTotals.cash}</span>
+                    <span className="text-lg font-black text-gray-700">KSh {dailyTotals.mpesa}</span>
+                    <span className="text-xl font-black text-pink-600">KSh {dailyTotals.total}</span>
+                        <span className="text-lg font-black text-emerald-600">KSh {dailyTotals.profit}</span>
+                        <span className="text-lg font-black text-indigo-600">KSh {dailyTotals.totalSalesValue}</span>
+                              <td className="px-6 py-4 text-sm font-bold text-gray-600">KSh {product.lastPrice}</td>
+                              <td className="px-6 py-4 text-sm font-bold text-emerald-600">KSh {product.sellingPrice - product.lastPrice}</td>
+                          <td className="px-6 py-4 text-sm font-bold text-pink-600">KSh {product.sellingPrice}</td>
+                                  <td className="px-6 py-4 text-sm font-black text-pink-600">KSh {seller.amount}</td>
+                    <p className="text-base font-black text-pink-600">KSh {selectedProductForSale.sellingPrice}</p>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Discount Amount (KSh)</label>
+                        Due: KSh {(selectedProductForSale.sellingPrice * saleQuantity) - discount}
+                        KSh {Math.max(0, ((selectedProductForSale.sellingPrice * saleQuantity) - discount) - amountPaid)}
+                          {paymentMethod ? `Pay KSh ${amountPaid}` : 'Select Method'}
+                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Wholesale Price (KSh)</label>
+                      <span className="text-red-500 text-sm font-black">-KSh {receiptSale.discount}</span>
+                    <span className="text-gray-800 text-sm font-black">KSh {(receiptSale.sellingPrice * receiptSale.quantity) - (receiptSale.discount || 0)}</span>
+                    <span className="text-emerald-500 text-sm font-black">KSh {receiptSale.amountPaid}</span>
+                      <span className="text-red-500 text-sm font-black">KSh {receiptSale.debtAmount}</span>
