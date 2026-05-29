@@ -4,15 +4,15 @@
  */
 
 import React, { useState, useMemo, useRef } from 'react';
-import { 
-  LayoutDashboard, 
-  Package, 
-  Users, 
-  ShoppingCart, 
-  BarChart3, 
-  Search, 
-  Plus, 
-  Lock, 
+import {
+  LayoutDashboard,
+  Package,
+  Users,
+  ShoppingCart,
+  BarChart3,
+  Search,
+  Plus,
+  Lock,
   AlertTriangle,
   LogOut,
   Menu,
@@ -2268,13 +2268,13 @@ export default function App() {
   const [loginMode, setLoginMode] = useState<'select' | 'pin'>('select');
   const [loginTarget, setLoginTarget] = useState<'admin' | 'Employee 1' | 'Employee 2' | null>(null);
   const EMP_PINS: Record<string, string> = { 'Employee 1': '1111', 'Employee 2': '2222' };
-  const [newProductData, setNewProductData] = useState({ 
-    name: '', 
-    brand: '', 
-    category: 'Other' as Category, 
-    quantity: 0, 
-    buyingPrice: 0, 
-    sellingPrice: 0, 
+  const [newProductData, setNewProductData] = useState({
+    name: '',
+    brand: '',
+    category: 'Other' as Category,
+    quantity: 0,
+    buyingPrice: 0,
+    sellingPrice: 0,
     imageUrl: '',
     bestUsedBy: '',
     bestUsedWhen: '',
@@ -2347,13 +2347,13 @@ export default function App() {
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
-    
+
     const newSales: Sale[] = cart.map(item => {
       // Distribute discount proportionally or just apply to the first item for simplicity.
       // We'll apply the 10 Ksh discount to the first item if applicable.
       const isFirstItem = cart.indexOf(item) === 0;
       const itemDiscount = (isFirstItem && cartDiscount > 0) ? cartDiscount : 0;
-      
+
       const totalPrice = (item.product.sellingPrice * item.quantity) - itemDiscount;
       const totalProfit = ((item.product.sellingPrice - item.product.lastPrice) * item.quantity) - itemDiscount;
 
@@ -2381,7 +2381,7 @@ export default function App() {
     });
 
     setSales([...newSales, ...sales]);
-    
+
     // Update stock
     const updatedProducts = [...products];
     cart.forEach(item => {
@@ -2428,7 +2428,7 @@ export default function App() {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     const last7DaysSales = visibleSales.filter(s => new Date(s.createdAt) >= oneWeekAgo);
-    
+
     const totals = last7DaysSales.reduce((acc, sale) => {
       acc.profit += sale.profit;
       acc.total += sale.amountPaid;
@@ -2436,11 +2436,11 @@ export default function App() {
     }, { profit: 0, total: 0 });
 
     const byEmployee = last7DaysSales.reduce((acc, sale) => {
-       const emp = sale.staffName || 'Unknown';
-       if (!acc[emp]) acc[emp] = { total: 0, count: 0 };
-       acc[emp].total += sale.amountPaid;
-       acc[emp].count += 1;
-       return acc;
+      const emp = sale.staffName || 'Unknown';
+      if (!acc[emp]) acc[emp] = { total: 0, count: 0 };
+      acc[emp].total += sale.amountPaid;
+      acc[emp].count += 1;
+      return acc;
     }, {} as Record<string, { total: number, count: number }>);
 
     return { ...totals, byEmployee };
@@ -2450,7 +2450,7 @@ export default function App() {
     const oneMonthAgo = new Date();
     oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
     const last30DaysSales = visibleSales.filter(s => new Date(s.createdAt) >= oneMonthAgo);
-    
+
     const totals = last30DaysSales.reduce((acc, sale) => {
       acc.profit += sale.profit;
       acc.total += sale.amountPaid;
@@ -2458,11 +2458,11 @@ export default function App() {
     }, { profit: 0, total: 0 });
 
     const byEmployee = last30DaysSales.reduce((acc, sale) => {
-       const emp = sale.staffName || 'Unknown';
-       if (!acc[emp]) acc[emp] = { total: 0, count: 0 };
-       acc[emp].total += sale.amountPaid;
-       acc[emp].count += 1;
-       return acc;
+      const emp = sale.staffName || 'Unknown';
+      if (!acc[emp]) acc[emp] = { total: 0, count: 0 };
+      acc[emp].total += sale.amountPaid;
+      acc[emp].count += 1;
+      return acc;
     }, {} as Record<string, { total: number, count: number }>);
 
     return { ...totals, byEmployee };
@@ -2472,7 +2472,7 @@ export default function App() {
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     const last365DaysSales = visibleSales.filter(s => new Date(s.createdAt) >= oneYearAgo);
-    
+
     const totals = last365DaysSales.reduce((acc, sale) => {
       acc.profit += sale.profit;
       acc.total += sale.amountPaid;
@@ -2480,11 +2480,11 @@ export default function App() {
     }, { profit: 0, total: 0 });
 
     const byEmployee = last365DaysSales.reduce((acc, sale) => {
-       const emp = sale.staffName || 'Unknown';
-       if (!acc[emp]) acc[emp] = { total: 0, count: 0 };
-       acc[emp].total += sale.amountPaid;
-       acc[emp].count += 1;
-       return acc;
+      const emp = sale.staffName || 'Unknown';
+      if (!acc[emp]) acc[emp] = { total: 0, count: 0 };
+      acc[emp].total += sale.amountPaid;
+      acc[emp].count += 1;
+      return acc;
     }, {} as Record<string, { total: number, count: number }>);
 
     return { ...totals, byEmployee };
@@ -2492,7 +2492,7 @@ export default function App() {
 
   const dailyTotals = useMemo(() => {
     const filteredSales = visibleSales.filter(s => !selectedDate || s.createdAt.split('T')[0] === selectedDate);
-    
+
     const totals = filteredSales.reduce((acc, sale) => {
       if (sale.paymentMethod === 'Cash') acc.cash += sale.amountPaid;
       if (sale.paymentMethod === 'Mpesa') acc.mpesa += sale.amountPaid;
@@ -2503,11 +2503,11 @@ export default function App() {
     }, { cash: 0, mpesa: 0, total: 0, profit: 0, totalSalesValue: 0 });
 
     const byEmployee = filteredSales.reduce((acc, sale) => {
-       const emp = sale.staffName || 'Unknown';
-       if (!acc[emp]) acc[emp] = { total: 0, count: 0 };
-       acc[emp].total += sale.amountPaid;
-       acc[emp].count += 1;
-       return acc;
+      const emp = sale.staffName || 'Unknown';
+      if (!acc[emp]) acc[emp] = { total: 0, count: 0 };
+      acc[emp].total += sale.amountPaid;
+      acc[emp].count += 1;
+      return acc;
     }, {} as Record<string, { total: number, count: number }>);
 
     return { ...totals, byEmployee };
@@ -2521,10 +2521,10 @@ export default function App() {
       const daySales = visibleSales.filter(s => s.createdAt.startsWith(dateStr));
       const salesVol = daySales.reduce((sum, s) => sum + s.sellingPrice * s.quantity, 0);
       const profit = daySales.reduce((sum, s) => sum + s.profit, 0);
-      return { 
-        name: date.toLocaleDateString('en-US', { weekday: 'short' }), 
-        sales: salesVol, 
-        profit: profit 
+      return {
+        name: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        sales: salesVol,
+        profit: profit
       };
     });
   }, [visibleSales]);
@@ -2566,7 +2566,7 @@ export default function App() {
 
   const handleRecordSale = () => {
     if (!selectedProductForSale || !paymentMethod) return;
-    
+
     if (paymentStatus === 'Debt' && !customerName.trim()) {
       showNotification('Customer name (Debt Owner) is required for debts.', 'error');
       return;
@@ -2604,7 +2604,7 @@ export default function App() {
       if (p.id === selectedProductForSale.id) {
         let remainingToDeduct = saleQuantity;
         let newStockUpdates = [...(p.stockUpdates || [])];
-        
+
         while (remainingToDeduct > 0 && newStockUpdates.length > 0) {
           if (newStockUpdates[0].quantity <= remainingToDeduct) {
             remainingToDeduct -= newStockUpdates[0].quantity;
@@ -2615,8 +2615,8 @@ export default function App() {
           }
         }
 
-        return { 
-          ...p, 
+        return {
+          ...p,
           stockQuantity: p.stockQuantity - saleQuantity,
           stockUpdates: newStockUpdates
         };
@@ -2690,7 +2690,7 @@ export default function App() {
 
   const handleAddAgent = () => {
     if (!newAgentName.trim()) return;
-    
+
     if (editingAgent) {
       if (agents.includes(newAgentName.trim()) && newAgentName.trim() !== editingAgent) {
         showNotification('Agent name already exists');
@@ -2709,7 +2709,7 @@ export default function App() {
       setAgents([...agents, newAgentName.trim()]);
       showNotification('Agent added successfully', 'success');
     }
-    
+
     setNewAgentName('');
     setIsAddingAgent(false);
     setEditingAgent(null);
@@ -2751,11 +2751,10 @@ export default function App() {
   const NavItem = ({ id, icon: Icon, label }: { id: string, icon: any, label: string }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-        activeTab === id 
-          ? 'bg-pink-100 text-pink-600 font-semibold shadow-sm' 
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === id
+          ? 'bg-pink-100 text-pink-600 font-semibold shadow-sm'
           : 'text-gray-500 hover:bg-pink-50 hover:text-pink-400'
-      }`}
+        }`}
     >
       <Icon size={20} />
       <span>{label}</span>
@@ -2766,7 +2765,7 @@ export default function App() {
     if (!showLogin) {
       return (
         <>
-          <Storefront 
+          <Storefront
             products={products}
             cart={cart}
             addToCart={addToCart}
@@ -2794,9 +2793,8 @@ export default function App() {
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 50 }}
-                className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-sm ${
-                  notification.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-                }`}
+                className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-sm ${notification.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+                  }`}
               >
                 {notification.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
                 {notification.message}
@@ -2810,19 +2808,19 @@ export default function App() {
     return (
       <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
         {/* Background Image with Overlay */}
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center z-0"
           style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=1974&auto=format&fit=crop")' }}
         >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
         </div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative z-10 bg-white/95 backdrop-blur-md p-8 rounded-[40px] shadow-2xl w-full max-w-md border border-white/20 text-center"
         >
-          <button 
+          <button
             onClick={() => setShowLogin(false)}
             className="absolute top-6 left-6 p-2 text-gray-400 hover:text-pink-500 transition-colors bg-white rounded-full shadow-sm"
           >
@@ -2833,13 +2831,13 @@ export default function App() {
             <img src="/logo.jpg" alt="Babyghal Logo" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
             <span className="text-[#d4af37] text-5xl font-serif italic hidden">B</span>
           </div>
-          
+
           <h1 className="text-4xl font-display font-black text-gray-800 mb-1">Babyghal</h1>
           <p className="text-pink-500 font-serif italic text-xl mb-8">beauty shop</p>
 
           <AnimatePresence mode="wait">
             {loginMode === 'select' ? (
-              <motion.div 
+              <motion.div
                 key="select"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -2847,7 +2845,7 @@ export default function App() {
                 className="space-y-4"
               >
                 <p className="text-gray-500 mb-6 font-medium">Please select your role to continue</p>
-                
+
                 <button
                   onClick={() => {
                     setLoginTarget('Employee 1');
@@ -2906,7 +2904,7 @@ export default function App() {
                 </button>
               </motion.div>
             ) : (
-              <motion.div 
+              <motion.div
                 key="pin"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -2914,7 +2912,7 @@ export default function App() {
                 className="space-y-6"
               >
                 <div className="flex items-center gap-2 mb-4">
-                  <button 
+                  <button
                     onClick={() => setLoginMode('select')}
                     className="p-2 hover:bg-gray-100 rounded-xl text-gray-400"
                   >
@@ -2925,7 +2923,7 @@ export default function App() {
 
                 <div className="flex justify-center gap-4">
                   {Array.from({ length: 4 }).map((_, i) => (
-                    <div 
+                    <div
                       key={i}
                       className={`w-12 h-16 rounded-2xl border-2 flex items-center justify-center text-2xl font-black transition-all ${pin.length > i ? 'border-pink-500 bg-pink-50 text-pink-600' : 'border-pink-100 text-gray-200'}`}
                     >
@@ -2933,8 +2931,8 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-                
-                <input 
+
+                <input
                   type="password"
                   maxLength={4}
                   value={pin}
@@ -2998,7 +2996,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white flex text-gray-800 font-sans">
       {/* Sidebar */}
-      <motion.aside 
+      <motion.aside
         initial={false}
         animate={{ width: isSidebarOpen ? 260 : 0, opacity: isSidebarOpen ? 1 : 0 }}
         className="bg-white border-r border-pink-100 overflow-hidden flex flex-col"
@@ -3030,7 +3028,7 @@ export default function App() {
         </nav>
 
         <div className="p-4 border-t border-pink-50">
-          <button 
+          <button
             onClick={() => {
               setIsAuthenticated(false);
               setIsAdminAuthenticated(false);
@@ -3049,7 +3047,7 @@ export default function App() {
         {/* Header */}
         <header className="h-20 bg-white border-b border-pink-100 px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2 hover:bg-pink-50 rounded-xl text-pink-500 transition-all"
             >
@@ -3064,8 +3062,8 @@ export default function App() {
           <div className="flex items-center gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Search products or brands..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -3098,7 +3096,7 @@ export default function App() {
                             <p className="text-sm">You have {stats.lowStockCount} product{stats.lowStockCount === 1 ? '' : 's'} running low on stock.</p>
                           </div>
                         </div>
-                        <button 
+                        <button
                           onClick={() => {
                             setActiveTab('inventory');
                             setInventoryCategory('All');
@@ -3122,7 +3120,7 @@ export default function App() {
                             <p className="text-sm">You have {stats.highStockCount} product{stats.highStockCount === 1 ? '' : 's'} with high stock quantities.</p>
                           </div>
                         </div>
-                        <button 
+                        <button
                           onClick={() => {
                             setActiveTab('inventory');
                             setInventoryCategory('All');
@@ -3191,7 +3189,7 @@ export default function App() {
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={trendData}>
                             <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-                            <Tooltip 
+                            <Tooltip
                               contentStyle={{ borderRadius: '16px', border: '1px solid #fbcfe8', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                               cursor={{ stroke: '#fbcfe8', strokeWidth: 2, strokeDasharray: '4 4' }}
                             />
@@ -3228,7 +3226,7 @@ export default function App() {
                               </div>
                             </div>
                             <div className="w-full h-2 bg-white rounded-full overflow-hidden">
-                              <motion.div 
+                              <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${product.performance}%` }}
                                 className={`h-full ${product.performance > 75 ? 'bg-emerald-500' : product.performance > 40 ? 'bg-pink-500' : 'bg-gray-300'}`}
@@ -3255,15 +3253,15 @@ export default function App() {
                           <button className="p-3 bg-pink-50 text-pink-500 rounded-2xl hover:bg-pink-100 transition-all">
                             <CalendarIcon size={20} />
                           </button>
-                          <input 
-                            type="date" 
+                          <input
+                            type="date"
                             value={selectedDate}
                             onChange={(e) => setSelectedDate(e.target.value)}
                             className="absolute inset-0 opacity-0 cursor-pointer"
                           />
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="bg-pink-50/50 p-6 rounded-3xl flex items-center gap-4">
                           <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-pink-500 shadow-sm">
@@ -3351,7 +3349,7 @@ export default function App() {
                           <p className="text-sm text-gray-400">Total collected today</p>
                         </div>
                         <div className="bg-pink-50 text-pink-600 px-4 py-2 rounded-xl text-lg font-black">
-                         KSh {dailyTotals.total}
+                          KSh {dailyTotals.total}
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -3383,7 +3381,7 @@ export default function App() {
                           <p className="text-sm text-gray-400">Total collected past 7 days</p>
                         </div>
                         <div className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-lg font-black" title="Includes both Cash and Mpesa">
-                         KSh {weeklyTotals.total}
+                          KSh {weeklyTotals.total}
                         </div>
                       </div>
                     </div>
@@ -3394,11 +3392,10 @@ export default function App() {
                           <button
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
-                            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                              selectedCategory === cat 
-                                ? 'bg-pink-500 text-white shadow-md shadow-pink-200' 
+                            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === cat
+                                ? 'bg-pink-500 text-white shadow-md shadow-pink-200'
                                 : 'bg-white text-gray-500 border border-pink-100 hover:border-pink-300'
-                            }`}
+                              }`}
                           >
                             {cat}
                           </button>
@@ -3408,7 +3405,7 @@ export default function App() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {filteredProducts.map(product => (
-                        <motion.div 
+                        <motion.div
                           layout
                           key={product.id}
                           whileHover={{ y: -5 }}
@@ -3433,13 +3430,13 @@ export default function App() {
                           </div>
                           <div className="flex items-center justify-between">
                             <p className="text-lg font-black text-pink-600">KSh {product.sellingPrice}</p>
-                            <button 
+                            <button
                               onClick={() => {
                                 setSelectedProductForSale(product);
                                 setAmountPaid(product.sellingPrice);
                                 setSaleQuantity(1);
                                 setPaymentStatus('Paid');
-                                setPaymentMethod(null); 
+                                setPaymentMethod(null);
                                 setDiscount(0);
                               }}
                               className="p-2 bg-pink-50 text-pink-500 rounded-xl hover:bg-pink-500 hover:text-white transition-all"
@@ -3456,7 +3453,7 @@ export default function App() {
             )}
 
             {activeTab === 'summary' && role === 'admin' && (
-              <motion.div 
+              <motion.div
                 key="summary"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -3478,7 +3475,7 @@ export default function App() {
                     const daySales = sales.filter(s => s.createdAt.startsWith(dateStr));
                     const total = daySales.reduce((sum, s) => sum + s.amountPaid, 0);
                     const profit = daySales.reduce((sum, s) => sum + s.profit, 0);
-                    
+
                     return (
                       <div key={dateStr} className="bg-white p-4 rounded-2xl shadow-sm border border-pink-100 flex flex-col items-center text-center">
                         <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
@@ -3486,7 +3483,7 @@ export default function App() {
                         </p>
                         <p className="text-xs font-bold text-gray-700 mb-2">{date.getDate()}</p>
                         <div className="w-full h-24 bg-pink-50 rounded-lg relative overflow-hidden mb-2">
-                          <motion.div 
+                          <motion.div
                             initial={{ height: 0 }}
                             animate={{ height: `${Math.min(100, (total / 1000) * 100)}%` }}
                             className="absolute bottom-0 left-0 right-0 bg-pink-500"
@@ -3578,7 +3575,7 @@ export default function App() {
             )}
 
             {activeTab === 'reports' && role === 'admin' && (
-              <motion.div 
+              <motion.div
                 key="reports"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -3629,12 +3626,12 @@ export default function App() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {(() => {
-                    const highestProfitProduct = [...products].sort((a,b) => (b.sellingPrice - b.lastPrice) - (a.sellingPrice - a.lastPrice))[0];
+                    const highestProfitProduct = [...products].sort((a, b) => (b.sellingPrice - b.lastPrice) - (a.sellingPrice - a.lastPrice))[0];
                     const bestSellingProduct = [...products].map(p => ({
                       ...p,
                       soldQty: visibleSales.filter(s => s.productId === p.id).reduce((sum, s) => sum + s.quantity, 0)
                     })).sort((a, b) => b.soldQty - a.soldQty)[0];
-                    
+
                     return (
                       <>
                         <div className="bg-white p-6 rounded-3xl shadow-sm border border-pink-100">
@@ -3685,7 +3682,7 @@ export default function App() {
                       </thead>
                       <tbody className="divide-y divide-pink-50">
                         {visibleSales.filter(s => s.profit > 0 || s.paymentStatus === 'Paid').slice(0, 50).map(sale => (
-                          <tr key={'profit-'+sale.id} className="hover:bg-pink-50/30 transition-colors">
+                          <tr key={'profit-' + sale.id} className="hover:bg-pink-50/30 transition-colors">
                             <td className="px-6 py-4">
                               <p className="text-sm font-bold text-gray-700">{new Date(sale.createdAt).toLocaleDateString()}</p>
                               <p className="text-[10px] text-gray-400">{new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
@@ -3809,15 +3806,15 @@ export default function App() {
                         <CalendarIcon size={18} />
                         <span>{selectedDate ? formatDate(selectedDate) : 'Select Day'}</span>
                       </button>
-                      <input 
-                        type="date" 
+                      <input
+                        type="date"
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                         className="absolute inset-0 opacity-0 cursor-pointer"
                       />
                     </div>
                     {selectedDate && (
-                      <button 
+                      <button
                         onClick={() => setSelectedDate('')}
                         className="text-xs text-gray-400 hover:text-pink-500 font-bold underline"
                       >
@@ -3881,12 +3878,12 @@ export default function App() {
                           <td className="px-6 py-4">
                             {sale.paymentStatus !== 'Paid' ? (
                               <button
-                              onClick={() => handleClearDebt(sale.id)}
-                              className={`text-[10px] font-bold px-2 py-1 rounded-lg uppercase transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm hover:shadow-md ${getStatusColor(sale.paymentStatus)} bg-white border border-current hover:bg-emerald-50`}
-                              title="Click to mark as Paid"
-                            >
-                              {sale.paymentStatus}
-                            </button>
+                                onClick={() => handleClearDebt(sale.id)}
+                                className={`text-[10px] font-bold px-2 py-1 rounded-lg uppercase transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm hover:shadow-md ${getStatusColor(sale.paymentStatus)} bg-white border border-current hover:bg-emerald-50`}
+                                title="Click to mark as Paid"
+                              >
+                                {sale.paymentStatus}
+                              </button>
                             ) : (
                               <span className={`text-[10px] font-bold px-2 py-1 rounded-lg uppercase ${getStatusColor(sale.paymentStatus)}`}>
                                 {sale.paymentStatus}
@@ -3909,7 +3906,7 @@ export default function App() {
                             <td className="px-6 py-4 text-sm font-bold text-emerald-500">+KSh {sale.profit}</td>
                           )}
                           <td className="px-6 py-4">
-                            <button 
+                            <button
                               onClick={() => setReceiptSale(sale)}
                               className="text-xs font-bold text-pink-500 hover:text-pink-600 underline"
                             >
@@ -3961,14 +3958,14 @@ export default function App() {
                 <div className="flex items-center justify-between gap-4">
                   <h3 className="font-bold text-gray-800">Inventory Management</h3>
                   <div className="flex items-center gap-2">
-                    <button 
+                    <button
                       onClick={() => setIsAddingProduct(true)}
                       className="flex items-center gap-2 bg-pink-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-pink-600 shadow-md shadow-pink-200 transition-all active:scale-95"
                     >
                       <Plus size={18} />
                       <span>New Product</span>
                     </button>
-                    <button 
+                    <button
                       onClick={() => setIsAddingOn(true)}
                       className="flex items-center gap-2 bg-white text-pink-500 border border-pink-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-pink-50 transition-all active:scale-95"
                     >
@@ -3997,11 +3994,10 @@ export default function App() {
                         setShowLowStockOnly(!showLowStockOnly);
                         if (!showLowStockOnly) setShowHighStockOnly(false);
                       }}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                        showLowStockOnly 
-                          ? 'bg-amber-100 text-amber-700 border border-amber-200' 
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${showLowStockOnly
+                          ? 'bg-amber-100 text-amber-700 border border-amber-200'
                           : 'bg-white text-gray-600 border border-pink-100 hover:bg-pink-50'
-                      }`}
+                        }`}
                     >
                       <AlertTriangle size={16} className={showLowStockOnly ? 'text-amber-500' : 'text-gray-400'} />
                       Low Stock Only
@@ -4011,11 +4007,10 @@ export default function App() {
                         setShowHighStockOnly(!showHighStockOnly);
                         if (!showHighStockOnly) setShowLowStockOnly(false);
                       }}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                        showHighStockOnly 
-                          ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${showHighStockOnly
+                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
                           : 'bg-white text-gray-600 border border-pink-100 hover:bg-pink-50'
-                      }`}
+                        }`}
                     >
                       <TrendingUp size={16} className={showHighStockOnly ? 'text-blue-500' : 'text-gray-400'} />
                       High Stock Only
@@ -4043,9 +4038,9 @@ export default function App() {
                     </thead>
                     <tbody className="divide-y divide-pink-50">
                       {products
-                        .filter(p => (inventoryCategory === 'All' || p.category === inventoryCategory) && 
-                                     (!showLowStockOnly || p.stockQuantity <= LOW_STOCK_THRESHOLD) &&
-                                     (!showHighStockOnly || p.stockQuantity >= HIGH_STOCK_THRESHOLD))
+                        .filter(p => (inventoryCategory === 'All' || p.category === inventoryCategory) &&
+                          (!showLowStockOnly || p.stockQuantity <= LOW_STOCK_THRESHOLD) &&
+                          (!showHighStockOnly || p.stockQuantity >= HIGH_STOCK_THRESHOLD))
                         .sort((a, b) => {
                           const dateA = a.createdAt.split('T')[0];
                           const dateB = b.createdAt.split('T')[0];
@@ -4053,78 +4048,78 @@ export default function App() {
                           return a.name.localeCompare(b.name);
                         })
                         .map(product => (
-                        <tr key={product.id} className="hover:bg-pink-50/30 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <img src={product.imageUrl} className="w-8 h-8 rounded-lg object-cover" referrerPolicy="no-referrer" />
-                              <div>
-                                <p className="text-sm font-bold text-gray-700">{product.name}</p>
-                                <div className="flex items-center gap-2">
-                                  <p className="text-[10px] text-pink-400 font-bold uppercase">{product.brand}</p>
-                                  {product.braidType && (
-                                    <span className="text-[8px] font-bold bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded uppercase">
-                                      {product.braidType} {product.colorNumber && `(${product.colorNumber})`}
-                                    </span>
-                                  )}
+                          <tr key={product.id} className="hover:bg-pink-50/30 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <img src={product.imageUrl} className="w-8 h-8 rounded-lg object-cover" referrerPolicy="no-referrer" />
+                                <div>
+                                  <p className="text-sm font-bold text-gray-700">{product.name}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-[10px] text-pink-400 font-bold uppercase">{product.brand}</p>
+                                    {product.braidType && (
+                                      <span className="text-[8px] font-bold bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded uppercase">
+                                        {product.braidType} {product.colorNumber && `(${product.colorNumber})`}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">{product.category}</td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className={`text-sm font-semibold ${product.stockQuantity <= LOW_STOCK_THRESHOLD && product.stockQuantity > 0 ? 'text-amber-600' : product.stockQuantity === 0 ? 'text-red-600' : product.stockQuantity >= HIGH_STOCK_THRESHOLD ? 'text-blue-600' : 'text-gray-700'}`}>
-                                {product.stockQuantity}
-                              </span>
-                              {product.stockUpdates && product.stockUpdates.length > 0 && product.stockQuantity > 0 && (
-                                <span className="text-[10px] text-gray-400 whitespace-nowrap mt-0.5" title="Oldest batch date (FIFO)">
-                                  Batch: {new Date(product.stockUpdates[0].date).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500">{product.category}</td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className={`text-sm font-semibold ${product.stockQuantity <= LOW_STOCK_THRESHOLD && product.stockQuantity > 0 ? 'text-amber-600' : product.stockQuantity === 0 ? 'text-red-600' : product.stockQuantity >= HIGH_STOCK_THRESHOLD ? 'text-blue-600' : 'text-gray-700'}`}>
+                                  {product.stockQuantity}
                                 </span>
-                              )}
-                            </div>
-                          </td>
-                          {role === 'admin' && (
-                            <>
-                              <td className="px-6 py-4 text-sm font-bold text-gray-600">KSh {product.lastPrice}</td>
-                              <td className="px-6 py-4 text-sm font-bold text-emerald-600">KSh {product.sellingPrice - product.lastPrice}</td>
-                            </>
-                          )}
-                          <td className="px-6 py-4 text-sm font-bold text-pink-600">KSh {product.sellingPrice}</td>
-                          <td className="px-6 py-4">
-                            {product.stockQuantity === 0 ? (
-                              <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-red-100 text-red-600 flex items-center gap-1 w-max">
-                                <AlertTriangle size={12} /> Out of Stock
-                              </span>
-                            ) : product.stockQuantity <= LOW_STOCK_THRESHOLD ? (
-                              <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-amber-100 text-amber-600 flex items-center gap-1 w-max">
-                                <AlertTriangle size={12} /> Low Stock
-                              </span>
-                            ) : product.stockQuantity >= HIGH_STOCK_THRESHOLD ? (
-                              <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-blue-100 text-blue-600 flex items-center gap-1 w-max">
-                                <TrendingUp size={12} /> High Stock
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-emerald-100 text-emerald-600">In Stock</span>
+                                {product.stockUpdates && product.stockUpdates.length > 0 && product.stockQuantity > 0 && (
+                                  <span className="text-[10px] text-gray-400 whitespace-nowrap mt-0.5" title="Oldest batch date (FIFO)">
+                                    Batch: {new Date(product.stockUpdates[0].date).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            {role === 'admin' && (
+                              <>
+                                <td className="px-6 py-4 text-sm font-bold text-gray-600">KSh {product.lastPrice}</td>
+                                <td className="px-6 py-4 text-sm font-bold text-emerald-600">KSh {product.sellingPrice - product.lastPrice}</td>
+                              </>
                             )}
-                          </td>
-                          <td className="px-6 py-4">
-                            <button 
-                              disabled={product.stockQuantity === 0}
-                              onClick={() => {
-                                setSelectedProductForSale(product);
-                                setAmountPaid(product.sellingPrice);
-                                setSaleQuantity(1);
-                                setPaymentStatus('Paid');
-                                setPaymentMethod(null);
-                                setDiscount(0);
-                              }}
-                              className="p-2 bg-pink-50 text-pink-500 rounded-xl hover:bg-pink-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <ShoppingCart size={18} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            <td className="px-6 py-4 text-sm font-bold text-pink-600">KSh {product.sellingPrice}</td>
+                            <td className="px-6 py-4">
+                              {product.stockQuantity === 0 ? (
+                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-red-100 text-red-600 flex items-center gap-1 w-max">
+                                  <AlertTriangle size={12} /> Out of Stock
+                                </span>
+                              ) : product.stockQuantity <= LOW_STOCK_THRESHOLD ? (
+                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-amber-100 text-amber-600 flex items-center gap-1 w-max">
+                                  <AlertTriangle size={12} /> Low Stock
+                                </span>
+                              ) : product.stockQuantity >= HIGH_STOCK_THRESHOLD ? (
+                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-blue-100 text-blue-600 flex items-center gap-1 w-max">
+                                  <TrendingUp size={12} /> High Stock
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-emerald-100 text-emerald-600">In Stock</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <button
+                                disabled={product.stockQuantity === 0}
+                                onClick={() => {
+                                  setSelectedProductForSale(product);
+                                  setAmountPaid(product.sellingPrice);
+                                  setSaleQuantity(1);
+                                  setPaymentStatus('Paid');
+                                  setPaymentMethod(null);
+                                  setDiscount(0);
+                                }}
+                                className="p-2 bg-pink-50 text-pink-500 rounded-xl hover:bg-pink-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <ShoppingCart size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -4140,7 +4135,7 @@ export default function App() {
               >
                 <div className="flex items-center justify-between gap-4">
                   <h3 className="font-bold text-gray-800">Required Products</h3>
-                  <button 
+                  <button
                     onClick={() => setIsRequestingProduct(true)}
                     className="flex items-center gap-2 bg-pink-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-pink-600 shadow-md shadow-pink-200 transition-all active:scale-95"
                   >
@@ -4174,11 +4169,10 @@ export default function App() {
                           <td className="px-6 py-4 text-sm text-gray-600">{req.requestedBy}</td>
                           <td className="px-6 py-4 text-sm text-gray-600">{new Date(req.dateRequested).toLocaleDateString()}</td>
                           <td className="px-6 py-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              req.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                              req.status === 'Fulfilled' ? 'bg-green-100 text-green-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${req.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
+                                req.status === 'Fulfilled' ? 'bg-green-100 text-green-700' :
+                                  'bg-red-100 text-red-700'
+                              }`}>
                               {req.status}
                             </span>
                           </td>
@@ -4224,7 +4218,7 @@ export default function App() {
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
                       <h3 className="font-bold text-gray-800">Wholesalers & Suppliers</h3>
-                      <button 
+                      <button
                         onClick={() => {
                           setEditingSeller(null);
                           setSellerFormData({ name: '', productName: '', amount: 0, contact: '', whatsappNumber: '' });
@@ -4238,8 +4232,8 @@ export default function App() {
                     </div>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="Search by product name..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -4288,9 +4282,9 @@ export default function App() {
                                   <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
                                       {seller.whatsappNumber && (
-                                        <a 
-                                          href={`https://wa.me/${seller.whatsappNumber}`} 
-                                          target="_blank" 
+                                        <a
+                                          href={`https://wa.me/${seller.whatsappNumber}`}
+                                          target="_blank"
                                           rel="noopener noreferrer"
                                           className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all"
                                           title="WhatsApp"
@@ -4298,7 +4292,7 @@ export default function App() {
                                           <MessageCircle size={16} />
                                         </a>
                                       )}
-                                      <button 
+                                      <button
                                         onClick={() => {
                                           setEditingSeller(seller);
                                           setSellerFormData({ ...seller });
@@ -4309,7 +4303,7 @@ export default function App() {
                                       >
                                         <Key size={16} />
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={() => handleDeleteSeller(seller.id)}
                                         className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
                                         title="Delete"
@@ -4331,7 +4325,7 @@ export default function App() {
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-pink-100">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="font-bold text-gray-800">Sales Agents</h3>
-                    <button 
+                    <button
                       onClick={() => setIsAddingAgent(true)}
                       className="flex items-center gap-2 bg-pink-500 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-pink-600 transition-all active:scale-95"
                     >
@@ -4350,13 +4344,13 @@ export default function App() {
                           <span className="font-bold text-gray-700">{agent}</span>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
+                          <button
                             onClick={() => handleEditAgent(agent)}
                             className="p-2 text-blue-500 hover:bg-white rounded-lg transition-all"
                           >
                             <Key size={14} />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDeleteAgent(agent)}
                             className="p-2 text-red-500 hover:bg-white rounded-lg transition-all"
                           >
@@ -4377,14 +4371,14 @@ export default function App() {
       <AnimatePresence>
         {selectedProductForSale && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedProductForSale(null)}
               className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -4410,7 +4404,7 @@ export default function App() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Seller/Agent</label>
-                    <select 
+                    <select
                       value={role === 'admin' ? selectedSeller : (activeEmployee || selectedSeller)}
                       onChange={(e) => setSelectedSeller(e.target.value)}
                       disabled={role !== 'admin'}
@@ -4425,7 +4419,7 @@ export default function App() {
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Quantity</label>
                     <div className="flex items-center gap-3">
-                      <button 
+                      <button
                         onClick={() => {
                           const newQty = Math.max(1, saleQuantity - 1);
                           setSaleQuantity(newQty);
@@ -4435,7 +4429,7 @@ export default function App() {
                       >
                         -
                       </button>
-                      <input 
+                      <input
                         type="number"
                         value={saleQuantity}
                         onChange={(e) => {
@@ -4446,7 +4440,7 @@ export default function App() {
                         }}
                         className="w-16 h-10 bg-pink-50 border-none rounded-xl text-xl font-black text-gray-800 text-center focus:ring-2 focus:ring-pink-300 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      <button 
+                      <button
                         onClick={() => {
                           const newQty = Math.min(selectedProductForSale.stockQuantity, saleQuantity + 1);
                           setSaleQuantity(newQty);
@@ -4464,8 +4458,8 @@ export default function App() {
                       <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">
                         {paymentStatus === 'Debt' ? 'Debt Owner Name (Required)' : 'Customer Name (Optional)'}
                       </label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         placeholder="e.g. Jane Doe"
@@ -4474,8 +4468,8 @@ export default function App() {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Customer Phone (Optional)</label>
-                      <input 
-                        type="tel" 
+                      <input
+                        type="tel"
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
                         placeholder="e.g. 0712345678"
@@ -4486,8 +4480,8 @@ export default function App() {
 
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Discount Amount (KSh)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={discount}
                       onChange={(e) => {
                         const newDiscount = Number(e.target.value);
@@ -4522,8 +4516,8 @@ export default function App() {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block">Amount Paid</label>
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         value={amountPaid}
                         onChange={(e) => setAmountPaid(Number(e.target.value))}
                         disabled={paymentStatus === 'Paid' || paymentStatus === 'Debt'}
@@ -4541,14 +4535,14 @@ export default function App() {
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block">Payment Method</label>
                     <div className="grid grid-cols-2 gap-2">
-                      <button 
+                      <button
                         onClick={() => setPaymentMethod('Cash')}
                         className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${paymentMethod === 'Cash' ? 'bg-pink-500 text-white shadow-lg shadow-pink-200' : 'bg-pink-50 text-pink-400'}`}
                       >
                         <Banknote size={18} />
                         Cash
                       </button>
-                      <button 
+                      <button
                         onClick={() => setPaymentMethod('Mpesa')}
                         className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${paymentMethod === 'Mpesa' ? 'bg-pink-500 text-white shadow-lg shadow-pink-200' : 'bg-pink-50 text-pink-400'}`}
                       >
@@ -4565,14 +4559,13 @@ export default function App() {
                         KSh {Math.max(0, ((selectedProductForSale.sellingPrice * saleQuantity) - discount) - amountPaid)}
                       </p>
                     </div>
-                    <button 
+                    <button
                       onClick={handleRecordSale}
                       disabled={!paymentMethod}
-                      className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 text-sm ${
-                        paymentMethod 
-                          ? 'bg-pink-500 text-white shadow-xl shadow-pink-100 active:scale-95' 
+                      className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 text-sm ${paymentMethod
+                          ? 'bg-pink-500 text-white shadow-xl shadow-pink-100 active:scale-95'
                           : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      }`}
+                        }`}
                     >
                       {paymentStatus === 'Debt' ? (
                         <>
@@ -4598,14 +4591,14 @@ export default function App() {
       <AnimatePresence>
         {isAddingProduct && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsAddingProduct(false)}
               className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -4622,8 +4615,8 @@ export default function App() {
                 <div className="space-y-3">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Product Name</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={newProductData.name}
                       onChange={(e) => setNewProductData({ ...newProductData, name: e.target.value })}
                       className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -4631,8 +4624,8 @@ export default function App() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Brand</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={newProductData.brand}
                       onChange={(e) => setNewProductData({ ...newProductData, brand: e.target.value })}
                       className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -4641,8 +4634,8 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Quantity</label>
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         value={newProductData.quantity}
                         onChange={(e) => setNewProductData({ ...newProductData, quantity: parseInt(e.target.value) })}
                         className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -4650,8 +4643,8 @@ export default function App() {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Buying Price</label>
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         value={newProductData.buyingPrice}
                         onChange={(e) => setNewProductData({ ...newProductData, buyingPrice: parseFloat(e.target.value) })}
                         className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -4660,8 +4653,8 @@ export default function App() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Selling Price</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={newProductData.sellingPrice}
                       onChange={(e) => setNewProductData({ ...newProductData, sellingPrice: parseFloat(e.target.value) })}
                       className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -4679,13 +4672,13 @@ export default function App() {
                       ))}
                     </select>
                   </div>
-                  
+
                   {newProductData.category === 'Braids' && (
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Braid Type</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="e.g., Jibambe, Havana Curl"
                           value={newProductData.braidType}
                           onChange={(e) => setNewProductData({ ...newProductData, braidType: e.target.value })}
@@ -4694,8 +4687,8 @@ export default function App() {
                       </div>
                       <div>
                         <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Color Number</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="e.g., 1, 33, 1/33"
                           value={newProductData.colorNumber}
                           onChange={(e) => setNewProductData({ ...newProductData, colorNumber: e.target.value })}
@@ -4707,8 +4700,8 @@ export default function App() {
 
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Best Used By (Solution)</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="e.g., Dry skin, Dandruff"
                       value={newProductData.bestUsedBy}
                       onChange={(e) => setNewProductData({ ...newProductData, bestUsedBy: e.target.value })}
@@ -4717,8 +4710,8 @@ export default function App() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Best Used When</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="e.g., At night, In the morning"
                       value={newProductData.bestUsedWhen}
                       onChange={(e) => setNewProductData({ ...newProductData, bestUsedWhen: e.target.value })}
@@ -4727,8 +4720,8 @@ export default function App() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Best Used With</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="e.g., Vitamin C Serum"
                       value={newProductData.bestUsedWith}
                       onChange={(e) => setNewProductData({ ...newProductData, bestUsedWith: e.target.value })}
@@ -4737,8 +4730,8 @@ export default function App() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Results After</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="e.g., 2 weeks, 1 month"
                       value={newProductData.resultsAfter}
                       onChange={(e) => setNewProductData({ ...newProductData, resultsAfter: e.target.value })}
@@ -4748,7 +4741,7 @@ export default function App() {
 
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Product Photo</label>
-                    <div 
+                    <div
                       onClick={() => fileInputRef.current?.click()}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
@@ -4777,8 +4770,8 @@ export default function App() {
                           <p className="text-[10px] text-pink-400 font-bold uppercase">Drop or Click to Upload</p>
                         </>
                       )}
-                      <input 
-                        type="file" 
+                      <input
+                        type="file"
                         ref={fileInputRef}
                         onChange={handleImageUpload}
                         accept="image/*"
@@ -4786,7 +4779,7 @@ export default function App() {
                       />
                     </div>
                   </div>
-                  <button 
+                  <button
                     onClick={() => {
                       const newProduct: Product = {
                         id: Math.random().toString(36).substr(2, 9),
@@ -4811,7 +4804,7 @@ export default function App() {
                       };
                       setProducts([...products, newProduct]);
                       setIsAddingProduct(false);
-                      setNewProductData({ 
+                      setNewProductData({
                         name: '', brand: '', category: 'Other', quantity: 0, buyingPrice: 0, sellingPrice: 0, imageUrl: '',
                         bestUsedBy: '', bestUsedWhen: '', bestUsedWith: '', resultsAfter: '', braidType: '', colorNumber: ''
                       });
@@ -4831,14 +4824,14 @@ export default function App() {
       <AnimatePresence>
         {isAddingOn && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsAddingOn(false)}
               className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -4857,14 +4850,14 @@ export default function App() {
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Search & Select Product</label>
                     <div className="relative mb-2">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                      <input 
+                      <input
                         type="text"
                         placeholder="Type to filter..."
                         className="w-full pl-9 pr-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
                         onChange={(e) => setAddOnSearchQuery(e.target.value)}
                       />
                     </div>
-                    <select 
+                    <select
                       value={addOnData.productId}
                       onChange={(e) => setAddOnData({ ...addOnData, productId: e.target.value })}
                       className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -4885,8 +4878,8 @@ export default function App() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Quantity Added</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={addOnData.quantity}
                       onChange={(e) => setAddOnData({ ...addOnData, quantity: parseInt(e.target.value) })}
                       className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -4895,11 +4888,11 @@ export default function App() {
                   <div className="p-3 bg-pink-50 rounded-xl text-[10px] text-pink-400 font-bold uppercase">
                     Date: {new Date().toLocaleDateString()}
                   </div>
-                  <button 
+                  <button
                     onClick={() => {
                       if (!addOnData.productId) return;
-                      setProducts(products.map(p => p.id === addOnData.productId ? { 
-                        ...p, 
+                      setProducts(products.map(p => p.id === addOnData.productId ? {
+                        ...p,
                         stockQuantity: p.stockQuantity + addOnData.quantity,
                         stockUpdates: [...(p.stockUpdates || []), { date: new Date().toISOString(), quantity: addOnData.quantity, addedBy: role === 'admin' ? 'Admin' : (activeEmployee || 'Staff') }]
                       } : p));
@@ -4921,14 +4914,14 @@ export default function App() {
       <AnimatePresence>
         {isRequestingProduct && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsRequestingProduct(false)}
               className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -4944,15 +4937,15 @@ export default function App() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Product Name / Description</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={requestedProductName}
                       onChange={(e) => setRequestedProductName(e.target.value)}
                       placeholder="What product do you need?"
                       className="w-full px-4 py-3 bg-pink-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
                     />
                   </div>
-                  <button 
+                  <button
                     onClick={() => {
                       if (!requestedProductName.trim()) return;
                       const newRequest: RequestedProduct = {
@@ -4982,14 +4975,14 @@ export default function App() {
       <AnimatePresence>
         {isAddingSeller && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsAddingSeller(false)}
               className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -5006,8 +4999,8 @@ export default function App() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Wholesaler Name</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={sellerFormData.name}
                       onChange={(e) => setSellerFormData({ ...sellerFormData, name: e.target.value })}
                       className="w-full px-4 py-3 bg-pink-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -5016,7 +5009,7 @@ export default function App() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Product Name</label>
-                    <select 
+                    <select
                       value={sellerFormData.productName}
                       onChange={(e) => setSellerFormData({ ...sellerFormData, productName: e.target.value })}
                       className="w-full px-4 py-3 bg-pink-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -5029,8 +5022,8 @@ export default function App() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Wholesale Price (KSh)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       value={sellerFormData.amount}
                       onChange={(e) => setSellerFormData({ ...sellerFormData, amount: Number(e.target.value) })}
                       className="w-full px-4 py-3 bg-pink-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -5039,8 +5032,8 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Contact Info</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={sellerFormData.contact}
                         onChange={(e) => setSellerFormData({ ...sellerFormData, contact: e.target.value })}
                         className="w-full px-4 py-3 bg-pink-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -5049,8 +5042,8 @@ export default function App() {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">WhatsApp Number</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={sellerFormData.whatsappNumber}
                         onChange={(e) => setSellerFormData({ ...sellerFormData, whatsappNumber: e.target.value })}
                         className="w-full px-4 py-3 bg-pink-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -5059,7 +5052,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     onClick={handleSaveSeller}
                     className="w-full bg-pink-500 text-white py-4 rounded-2xl font-bold shadow-xl shadow-pink-100 active:scale-95 transition-all mt-4"
                   >
@@ -5076,14 +5069,14 @@ export default function App() {
       <AnimatePresence>
         {isAddingAgent && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsAddingAgent(false)}
               className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -5104,8 +5097,8 @@ export default function App() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Agent Name</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={newAgentName}
                       onChange={(e) => setNewAgentName(e.target.value)}
                       className="w-full px-4 py-3 bg-pink-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
@@ -5114,7 +5107,7 @@ export default function App() {
                     />
                   </div>
 
-                  <button 
+                  <button
                     onClick={handleAddAgent}
                     className="w-full bg-pink-500 text-white py-4 rounded-2xl font-bold shadow-xl shadow-pink-100 active:scale-95 transition-all mt-4"
                   >
@@ -5131,14 +5124,14 @@ export default function App() {
       <AnimatePresence>
         {receiptSale && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setReceiptSale(null)}
               className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -5190,7 +5183,7 @@ export default function App() {
                 </div>
 
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={() => {
                       // In a real app, this would trigger a print dialog
                       showNotification('Printing receipt...');
@@ -5200,7 +5193,7 @@ export default function App() {
                   >
                     Print
                   </button>
-                  <button 
+                  <button
                     onClick={() => setReceiptSale(null)}
                     className="flex-1 bg-pink-500 text-white py-3 rounded-xl font-bold hover:bg-pink-600 shadow-lg shadow-pink-200 transition-all"
                   >
@@ -5220,9 +5213,8 @@ export default function App() {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-sm ${
-              notification.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-            }`}
+            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-sm ${notification.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+              }`}
           >
             {notification.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
             {notification.message}
@@ -5234,14 +5226,14 @@ export default function App() {
       <AnimatePresence>
         {confirmDialog && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/40 backdrop-blur-sm"
               onClick={() => setConfirmDialog(null)}
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
@@ -5253,13 +5245,13 @@ export default function App() {
               <h3 className="text-lg font-black text-gray-800 mb-2">Are you sure?</h3>
               <p className="text-sm text-gray-500 mb-6">{confirmDialog.message}</p>
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => setConfirmDialog(null)}
                   className="flex-1 py-3 rounded-xl font-bold text-gray-400 hover:bg-gray-50 transition-all"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={confirmDialog.onConfirm}
                   className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold shadow-lg shadow-red-100 active:scale-95 transition-all"
                 >
