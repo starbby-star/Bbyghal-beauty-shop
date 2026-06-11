@@ -4,6 +4,22 @@
 
 Staff login uses **Supabase RPC** with bcrypt-hashed PINs (never stored in the frontend bundle). The storefront only receives **public product data** (no wholesale costs). Web orders reserve stock until an **admin confirms** the WhatsApp order.
 
+## Cursor MCP (optional)
+
+`.cursor/mcp.json` connects Cursor to your Supabase project:
+
+```json
+{
+  "mcpServers": {
+    "supabase": {
+      "url": "https://mcp.supabase.com/mcp?project_ref=deiycrewvqvbgisrbglu"
+    }
+  }
+}
+```
+
+After adding, restart Cursor and approve the Supabase MCP connection when prompted. Agent skills: `.agents/skills/supabase` (installed via `npx skills add supabase/agent-skills`).
+
 ## BLUMERA Supabase project
 
 - **Dashboard:** https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu
@@ -11,7 +27,7 @@ Staff login uses **Supabase RPC** with bcrypt-hashed PINs (never stored in the f
 - **API keys:** https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu/settings/api
 - **SQL editor:** https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu/sql/new
 
-Copy the **anon public** key into `VITE_SUPABASE_ANON_KEY` (GitHub secret or local `.env`).
+Copy the **anon public** key into `VITE_SUPABASE_ANON_KEY` (GitHub secret or local `.env`). Migrations `001`–`003` and staff PINs are applied on project `deiycrewvqvbgisrbglu`.
 
 ## 1. Supabase migration
 
