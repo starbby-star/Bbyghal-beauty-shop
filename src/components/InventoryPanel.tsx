@@ -234,27 +234,33 @@ export default function InventoryPanel({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-2xl font-black text-gray-800">Inventory</h3>
+          <h3 className="text-2xl font-black text-gray-900">
+            {role === 'admin' ? 'Inventory' : 'Stock Check'}
+          </h3>
           <p className="text-sm text-gray-500 mt-1">
-            Add products with a date — oldest stock sells first (FIFO)
+            {role === 'admin'
+              ? 'Add products with a date — oldest stock sells first (FIFO)'
+              : 'View stock levels and record sales — contact admin to add products'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsAddingProduct(true)}
-            className="flex items-center gap-2 bg-pink-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-pink-600 shadow-lg shadow-pink-200/50 transition-all active:scale-95"
-          >
-            <Plus size={18} />
-            New Product
-          </button>
-          <button
-            onClick={() => setIsAddingOn(true)}
-            className="flex items-center gap-2 bg-white text-pink-600 border-2 border-pink-200 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-pink-50 transition-all active:scale-95"
-          >
-            <Calendar size={18} />
-            Add Stock Batch
-          </button>
-        </div>
+        {role === 'admin' && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsAddingProduct(true)}
+              className="flex items-center gap-2 bg-black text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-pink-600 shadow-lg transition-all active:scale-95"
+            >
+              <Plus size={18} />
+              New Product
+            </button>
+            <button
+              onClick={() => setIsAddingOn(true)}
+              className="flex items-center gap-2 bg-white text-pink-600 border-2 border-pink-200 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-pink-50 transition-all active:scale-95"
+            >
+              <Calendar size={18} />
+              Add Stock Batch
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Filters */}

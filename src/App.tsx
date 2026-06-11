@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CATEGORIES, THEME } from './constants';
+import { BRAND } from './constants/brand';
 import { Product, Category, Role, Sale, PaymentMethod, Seller, PaymentStatus, CartItem, RequestedProduct } from './types';
 import Storefront from './Storefront';
 import InventoryPanel from './components/InventoryPanel';
@@ -2710,16 +2711,54 @@ export default function App() {
     }
   };
 
-  const NavItem = ({ id, icon: Icon, label }: { id: string, icon: any, label: string }) => (
+  const PAGE_TITLES: Record<string, string> = {
+    dashboard: 'Dashboard',
+    braids: 'Braids',
+    summary: 'Sales Summary',
+    inventory: role === 'admin' ? 'Inventory' : 'Stock Check',
+    sellers: 'Sellers',
+    reports: 'Profit Reports',
+    sales: 'Sales History',
+  };
+
+  const NavItem = ({ id, icon: Icon, label }: { id: string; icon: React.ComponentType<{ size?: number }>; label: string }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === id
-          ? 'bg-pink-100 text-pink-600 font-semibold shadow-sm'
-          : 'text-gray-500 hover:bg-pink-50 hover:text-pink-400'
-        }`}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm ${
+        activeTab === id
+          ? 'bg-pink-500 text-white font-semibold shadow-lg shadow-pink-500/30'
+          : 'text-gray-400 hover:bg-white/10 hover:text-white'
+      }`}
     >
-      <Icon size={20} />
+      <Icon size={18} />
       <span>{label}</span>
+    </button>
+  );
+
+  const NavSection = ({ title }: { title: string }) => (
+    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-4 pt-4 pb-1">{title}</p>
+  );
+
+  const QuickAction = ({
+    icon: Icon,
+    label,
+    desc,
+    onClick,
+  }: {
+    icon: React.ComponentType<{ size?: number }>;
+    label: string;
+    desc: string;
+    onClick: () => void;
+  }) => (
+    <button
+      onClick={onClick}
+      className="bg-white border border-gray-100 rounded-2xl p-5 text-left hover:border-pink-300 hover:shadow-lg hover:shadow-pink-100/50 transition-all group"
+    >
+      <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-pink-500 mb-3 group-hover:bg-pink-500 group-hover:text-white transition-colors">
+        <Icon size={20} />
+      </div>
+      <p className="font-bold text-gray-900 text-sm">{label}</p>
+      <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
     </button>
   );
 
@@ -2790,12 +2829,13 @@ export default function App() {
           </button>
 
           <div className="w-24 h-24 bg-black rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-black/20 mt-4 overflow-hidden">
-            <img src="/logo.jpg" alt="Babyghal Logo" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
-            <span className="text-[#d4af37] text-5xl font-serif italic hidden">B</span>
+            <img src="/logo.jpg" alt="BLUMERA Logo" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
+            <span className="text-pink-500 text-5xl font-black hidden">B</span>
           </div>
 
-          <h1 className="text-4xl font-display font-black text-gray-800 mb-1">Babyghal</h1>
-          <p className="text-pink-500 font-serif italic text-xl mb-8">beauty shop</p>
+          <h1 className="text-4xl font-display font-black text-gray-900 mb-1">{BRAND.systemName}</h1>
+          <p className="text-pink-500 font-bold text-sm tracking-wide mb-1">{BRAND.tagline}</p>
+          <p className="text-gray-500 font-medium text-lg mb-8">{BRAND.shopName}</p>
 
           <AnimatePresence mode="wait">
             {loginMode === 'select' ? (
@@ -2821,7 +2861,7 @@ export default function App() {
                     </div>
                     <div className="text-left">
                       <p className="font-black text-gray-800">Employee 1</p>
-                      <p className="text-xs text-gray-400">Access sales & inventory</p>
+                      <p className="text-xs text-gray-400">Record sales · check stock</p>
                     </div>
                   </div>
                   <ChevronRight className="text-pink-300 group-hover:text-pink-500 transition-colors" />
@@ -2840,7 +2880,7 @@ export default function App() {
                     </div>
                     <div className="text-left">
                       <p className="font-black text-gray-800">Employee 2</p>
-                      <p className="text-xs text-gray-400">Access sales & inventory</p>
+                      <p className="text-xs text-gray-400">Record sales · check stock</p>
                     </div>
                   </div>
                   <ChevronRight className="text-pink-300 group-hover:text-pink-500 transition-colors" />
@@ -2961,79 +3001,91 @@ export default function App() {
       <motion.aside
         initial={false}
         animate={{ width: isSidebarOpen ? 260 : 0, opacity: isSidebarOpen ? 1 : 0 }}
-        className="bg-white border-r border-pink-100 overflow-hidden flex flex-col"
+        className="admin-sidebar border-r border-gray-800 overflow-hidden flex flex-col shrink-0"
       >
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-pink-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-pink-200">
-              <span className="text-xl font-display italic">B</span>
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 bg-pink-500 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg shadow-pink-500/40">
+              B
             </div>
-            <h1 className="text-xl font-display font-black text-pink-600 whitespace-nowrap">Babyghal</h1>
+            <div>
+              <h1 className="text-lg font-display font-black text-white whitespace-nowrap">{BRAND.systemName}</h1>
+              <p className="text-[10px] text-pink-400 font-bold">{BRAND.tagline}</p>
+            </div>
           </div>
-          <p className="text-[10px] text-pink-400 font-serif italic tracking-widest uppercase pl-1">beauty shop</p>
+          <p className="text-[10px] text-gray-500 pl-[52px]">{BRAND.shopName}</p>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-4">
+        <nav className="flex-1 px-3 space-y-0.5 mt-2 overflow-y-auto">
+          <NavSection title="Overview" />
           <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" />
           <NavItem id="braids" icon={Scissors} label="Braids" />
-          {role === 'admin' && (
+          <NavItem id="sales" icon={ShoppingCart} label="Sales History" />
+
+          {role === 'admin' ? (
             <>
-              <NavItem id="summary" icon={TrendingUp} label="Sales Summary" />
+              <NavSection title="Management" />
               <NavItem id="inventory" icon={Package} label="Inventory" />
               <NavItem id="sellers" icon={Users} label="Sellers" />
+              <NavSection title="Reports" />
+              <NavItem id="summary" icon={TrendingUp} label="Sales Summary" />
               <NavItem id="reports" icon={BarChart3} label="Profit Reports" />
             </>
+          ) : (
+            <>
+              <NavSection title="Stock" />
+              <NavItem id="inventory" icon={Package} label="Stock Check" />
+            </>
           )}
-          {role === 'staff' && (
-            <NavItem id="inventory" icon={Package} label="Inventory" />
-          )}
-          <NavItem id="sales" icon={ShoppingCart} label="Sales History" />
         </nav>
 
-        <div className="p-4 border-t border-pink-50">
+        <div className="p-4 border-t border-white/10">
           <button
             onClick={() => {
               setIsAuthenticated(false);
               setIsAdminAuthenticated(false);
               setLoginMode('select');
             }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-all font-medium"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/10 hover:text-white transition-all font-medium text-sm"
           >
-            <LogOut size={20} />
+            <LogOut size={18} />
             <span>Logout</span>
           </button>
         </div>
       </motion.aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-pink-50/30">
-        {/* Header */}
-        <header className="h-20 bg-white border-b border-pink-100 px-6 flex items-center justify-between">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden admin-main">
+        <header className="h-[72px] bg-white border-b border-gray-100 px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 hover:bg-pink-50 rounded-xl text-pink-500 transition-all"
+              className="p-2 hover:bg-gray-100 rounded-xl text-gray-700 transition-all"
             >
-              <Menu size={24} />
+              <Menu size={22} />
             </button>
             <div>
-              <h2 className="text-2xl font-display font-black text-gray-800">Babyghal beauty shop</h2>
-              <p className="text-xs text-gray-400 font-medium">Welcome back, <span className="text-pink-500 font-bold capitalize">{role === 'admin' ? 'Admin' : activeEmployee || 'Staff'}</span></p>
+              <h2 className="text-xl font-display font-black text-gray-900">
+                {PAGE_TITLES[activeTab] || 'Dashboard'}
+              </h2>
+              <p className="text-xs text-gray-500">
+                {BRAND.systemName} · <span className="text-pink-500 font-semibold capitalize">{role === 'admin' ? 'Admin' : activeEmployee || 'Staff'}</span>
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          {(activeTab === 'dashboard' || activeTab === 'inventory' || activeTab === 'braids') && (
+            <div className="relative hidden sm:block">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <input
                 type="text"
-                placeholder="Search products or brands..."
+                placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all w-64"
+                className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-300 outline-none w-56"
               />
             </div>
-          </div>
+          )}
         </header>
 
         {/* Scrollable Content */}
@@ -3086,6 +3138,15 @@ export default function App() {
                         </button>
                       </div>
                     )}
+
+                    {/* Quick navigation */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                      <QuickAction icon={Package} label="Inventory" desc="Add & manage products" onClick={() => setActiveTab('inventory')} />
+                      <QuickAction icon={Scissors} label="Braids" desc="Filter braid catalog" onClick={() => setActiveTab('braids')} />
+                      <QuickAction icon={TrendingUp} label="Sales Summary" desc="Revenue overview" onClick={() => setActiveTab('summary')} />
+                      <QuickAction icon={BarChart3} label="Profit Reports" desc="Margin analytics" onClick={() => setActiveTab('reports')} />
+                      <QuickAction icon={ShoppingCart} label="Sales History" desc="All transactions" onClick={() => setActiveTab('sales')} />
+                    </div>
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -3294,6 +3355,35 @@ export default function App() {
 
                 {role === 'staff' && (
                   <div className="space-y-6">
+                    <div className="bg-black text-white rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-48 h-48 bg-pink-500/20 rounded-full blur-3xl" />
+                      <div className="relative">
+                        <p className="text-pink-400 text-xs font-bold uppercase tracking-widest mb-1">{BRAND.tagline}</p>
+                        <h3 className="text-2xl font-display font-black mb-1">Welcome, {activeEmployee}</h3>
+                        <p className="text-gray-400 text-sm">{BRAND.shopName} · Record sales & check stock</p>
+                        <div className="flex flex-wrap gap-3 mt-5">
+                          <button
+                            onClick={() => setActiveTab('dashboard')}
+                            className="px-4 py-2 bg-pink-500 rounded-xl text-sm font-bold hover:bg-pink-400 transition-colors"
+                          >
+                            Record Sale
+                          </button>
+                          <button
+                            onClick={() => setActiveTab('braids')}
+                            className="px-4 py-2 bg-white/10 rounded-xl text-sm font-bold hover:bg-white/20 transition-colors"
+                          >
+                            Browse Braids
+                          </button>
+                          <button
+                            onClick={() => setActiveTab('inventory')}
+                            className="px-4 py-2 bg-white/10 rounded-xl text-sm font-bold hover:bg-white/20 transition-colors"
+                          >
+                            Stock Check
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Staff Daily Summary */}
                     <div className="bg-white p-6 rounded-3xl shadow-sm border border-pink-100 mb-8">
                       <div className="flex items-center justify-between mb-6">

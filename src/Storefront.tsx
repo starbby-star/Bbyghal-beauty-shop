@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Product, CartItem, PaymentMethod, Category } from './types';
 import { CATEGORIES } from './constants';
+import { BRAND } from './constants/brand';
 import BraidsShopSection from './components/BraidsShopSection';
 import { getBraidStyle } from './utils/braidFilters';
 
@@ -15,9 +16,9 @@ const LogoImage = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
   return (
     <div className={`bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center overflow-hidden rounded-2xl shadow-lg ${sizes[size]}`}>
       {!error ? (
-        <img src="/logo.jpg" alt="Babyghal" className="w-full h-full object-contain" onError={() => setError(true)} />
+        <img src="/logo.jpg" alt="BLUMERA" className="w-full h-full object-contain" onError={() => setError(true)} />
       ) : (
-        <span className="text-[#d4af37] font-display italic text-xl font-bold">B</span>
+        <span className="text-pink-500 font-display font-black text-xl">B</span>
       )}
     </div>
   );
@@ -102,7 +103,7 @@ export default function Storefront({
       return;
     }
     const orderNumber = `BB-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    let orderText = `Hello Babyghal! 💖 I'd like to place an order:\n\n`;
+    let orderText = `${BRAND.whatsappGreeting} 💖 I'd like to place an order:\n\n`;
     orderText += `*Order Number:* ${orderNumber}\n*Name:* ${checkoutCustomerName}\n*Phone:* ${checkoutCustomerPhone}\n`;
     orderText += `*Location:* ${location}\n*Delivery Date:* ${deliveryDate}\n\n*Order Details:*\n`;
     cart.forEach((item) => {
@@ -121,33 +122,34 @@ export default function Storefront({
   return (
     <div className="min-h-screen storefront-gradient flex flex-col font-sans text-gray-800">
       {/* Nav */}
-      <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-pink-100/60">
+      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-[72px] flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <LogoImage />
             <div>
-              <h1 className="text-xl sm:text-2xl font-display font-bold text-gray-900 leading-none tracking-tight">Babyghal</h1>
-              <p className="text-[11px] text-rose-500 font-medium tracking-[0.2em] uppercase">Beauty Shop</p>
+              <h1 className="text-xl sm:text-2xl font-display font-bold text-white leading-none tracking-tight">{BRAND.systemName}</h1>
+              <p className="text-[10px] text-pink-500 font-bold tracking-wide">{BRAND.tagline}</p>
+              <p className="text-[9px] text-gray-400 hidden sm:block">{BRAND.shopName}</p>
             </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
-            <button onClick={scrollToShop} className="hover:text-rose-600 transition-colors">Shop</button>
-            <button onClick={scrollToBraids} className="hover:text-rose-600 transition-colors">Braids</button>
-            <a href="#about" className="hover:text-rose-600 transition-colors">About</a>
-            <a href="#contact" className="hover:text-rose-600 transition-colors">Contact</a>
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-300">
+            <button onClick={scrollToShop} className="hover:text-pink-400 transition-colors">Shop</button>
+            <button onClick={scrollToBraids} className="hover:text-pink-400 transition-colors">Braids</button>
+            <a href="#about" className="hover:text-pink-400 transition-colors">About</a>
+            <a href="#contact" className="hover:text-pink-400 transition-colors">Contact</a>
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={onAdminLoginClick}
-              className="hidden sm:block text-xs font-semibold text-gray-500 hover:text-rose-600 px-3 py-2 rounded-full hover:bg-rose-50 transition-all"
+              className="hidden sm:block text-xs font-semibold text-gray-400 hover:text-pink-400 px-3 py-2 rounded-full hover:bg-white/10 transition-all"
             >
               Staff
             </button>
             <button
               onClick={() => { setShowWishlist(!showWishlist); if (!showWishlist) scrollToShop(); }}
-              className={`relative p-2.5 rounded-full transition-all ${showWishlist ? 'bg-rose-500 text-white shadow-lg shadow-rose-300/40' : 'bg-white text-rose-500 border border-pink-100 hover:border-rose-200'}`}
+              className={`relative p-2.5 rounded-full transition-all ${showWishlist ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/40' : 'bg-white/10 text-white border border-white/20 hover:border-pink-500'}`}
             >
               <Heart size={20} className={showWishlist ? 'fill-white' : ''} />
               {wishlist.length > 0 && (
@@ -158,11 +160,11 @@ export default function Storefront({
             </button>
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative p-2.5 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/20"
+              className="relative p-2.5 bg-pink-500 text-white rounded-full hover:bg-pink-400 transition-all shadow-lg shadow-pink-500/30"
             >
               <ShoppingCart size={20} />
               {cartTotalItems > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-white text-pink-600 text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-black">
                   {cartTotalItems}
                 </span>
               )}
@@ -172,26 +174,26 @@ export default function Storefront({
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 via-transparent to-amber-100/30 pointer-events-none" />
+      <section className="relative overflow-hidden blumera-hero text-white">
+        <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 via-transparent to-transparent pointer-events-none" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 sm:pt-16 sm:pb-20 relative">
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-              <div className="inline-flex items-center gap-2 bg-white/80 border border-rose-100 rounded-full px-4 py-1.5 text-xs font-semibold text-rose-600 mb-6 shadow-sm">
+              <div className="inline-flex items-center gap-2 bg-pink-500/20 border border-pink-500/30 rounded-full px-4 py-1.5 text-xs font-bold text-pink-400 mb-6">
                 <Sparkles size={14} />
-                Kenya&apos;s glow-up destination
+                {BRAND.tagline}
               </div>
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-gray-900 leading-[1.1] mb-5">
-                We glow<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-pink-400">in & out</span>
+              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold leading-[1.1] mb-3">
+                {BRAND.systemName}
               </h2>
-              <p className="text-lg text-gray-600 mb-8 max-w-md leading-relaxed">
-                Premium wigs, skincare, braids & beauty must-haves — delivered countrywide. Shop. Slay. Repeat.
+              <p className="text-pink-400 font-semibold text-lg mb-5">{BRAND.shopName}</p>
+              <p className="text-gray-400 mb-8 max-w-md leading-relaxed">
+                Premium wigs, skincare, braids & beauty must-haves — delivered countrywide.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={scrollToShop}
-                  className="inline-flex items-center gap-2 bg-gray-900 text-white px-7 py-3.5 rounded-full font-bold hover:bg-gray-800 transition-all shadow-xl shadow-gray-900/15 active:scale-95"
+                  className="inline-flex items-center gap-2 bg-pink-500 text-white px-7 py-3.5 rounded-full font-bold hover:bg-pink-400 transition-all blumera-pink-glow active:scale-95"
                 >
                   Shop Now <ArrowRight size={18} />
                 </button>
@@ -199,7 +201,7 @@ export default function Storefront({
                   href="https://wa.me/254752520441"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 bg-emerald-500 text-white px-7 py-3.5 rounded-full font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25"
+                  className="inline-flex items-center gap-2 bg-white text-black px-7 py-3.5 rounded-full font-bold hover:bg-gray-100 transition-all"
                 >
                   <MessageCircle size={18} /> WhatsApp
                 </a>
@@ -238,7 +240,7 @@ export default function Storefront({
       {/* Shop */}
       <main id="shop" className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 w-full">
         {/* Search + categories */}
-        <div className="sticky top-16 sm:top-[72px] z-30 bg-cream/90 backdrop-blur-lg py-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:rounded-2xl mb-8">
+        <div className="sticky top-16 sm:top-[72px] z-30 bg-white/95 backdrop-blur-lg py-4 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-gray-100 mb-8">
           <div className="relative mb-4">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
@@ -256,8 +258,8 @@ export default function Storefront({
                 onClick={() => setSelectedCategory(category)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
                   selectedCategory === category
-                    ? 'bg-gray-900 text-white shadow-md'
-                    : 'bg-white text-gray-600 border border-pink-100 hover:border-rose-200 hover:text-rose-600'
+                    ? 'bg-black text-white shadow-md'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:border-pink-500 hover:text-pink-600'
                 }`}
               >
                 <span>{CATEGORY_ICONS[category]}</span>
@@ -355,7 +357,8 @@ export default function Storefront({
         {/* About + Contact */}
         <div id="about" className="grid md:grid-cols-2 gap-6 mt-20 scroll-mt-24">
           <div className="bg-white rounded-3xl p-8 border border-pink-50 shadow-sm">
-            <h3 className="text-2xl font-display font-bold mb-4">About Babyghal</h3>
+            <h3 className="text-2xl font-display font-bold mb-1">{BRAND.systemName}</h3>
+            <p className="text-pink-500 font-bold text-sm mb-4">{BRAND.tagline} · {BRAND.shopName}</p>
             <p className="text-gray-600 leading-relaxed mb-6">
               Your ultimate beauty destination — premium wigs, flawless skincare, and everyday glow-up essentials. Based in Mururui with countrywide delivery.
             </p>
@@ -383,7 +386,7 @@ export default function Storefront({
       {/* Footer */}
       <footer className="border-t border-pink-100/60 py-8 bg-white/50">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-gray-400 text-sm">© {new Date().getFullYear()} Babyghal Beauty Shop</p>
+          <p className="text-gray-500 text-sm">{BRAND.systemName} · {BRAND.shopName} · © {new Date().getFullYear()}</p>
         </div>
       </footer>
 
@@ -419,7 +422,7 @@ export default function Storefront({
                 </div>
                 <p className="text-3xl font-black text-gray-900 mb-4">KSh {selectedProduct.sellingPrice.toLocaleString()}</p>
                 <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                  {selectedProduct.fullDescription || selectedProduct.shortDescription || 'Premium beauty product from the Babyghal collection.'}
+                  {selectedProduct.fullDescription || selectedProduct.shortDescription || `Premium beauty product from the ${BRAND.shopName} collection.`}
                 </p>
                 {selectedProduct.category === 'Braids' && (
                   <div className="flex flex-wrap gap-2 mb-4">

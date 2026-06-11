@@ -21,10 +21,13 @@ export const CATEGORIES: Category[] = [
 ];
 
 export const THEME = {
-  primary: '#FF1493', // Deep Pink
-  secondary: '#FFF0F5', // Light Pink
-  accent: '#FF69B4', // Hot Pink
+  primary: '#FF1493',
+  secondary: '#FFF0F5',
+  accent: '#000000',
   background: '#FFFFFF',
-  text: '#1F2937',
+  text: '#111111',
   muted: '#6B7280',
+  black: '#0a0a0a',
+  pink: '#FF1493',
+  white: '#FFFFFF',
 };
