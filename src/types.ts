@@ -6,6 +6,8 @@
 export type Role = 'admin' | 'staff';
 export type PaymentMethod = 'Cash' | 'Mpesa';
 export type PaymentStatus = 'Paid' | 'Deposit' | 'Debt';
+export type OrderChannel = 'whatsapp' | 'pos';
+export type NegotiationStatus = 'Pending' | 'Confirmed' | 'Cancelled';
 
 export interface Profile {
   id: string;
@@ -26,6 +28,14 @@ export interface Seller {
 }
 
 export type Category = 'All' | 'Soaps' | 'Facial' | 'Hair' | 'Braids' | 'Makeup' | 'Skincare' | 'Perfumes' | 'Nails' | 'Body' | 'Accessories' | 'Other';
+
+/** A single stock intake batch — oldest batch sells first (FIFO). */
+export interface StockBatch {
+  date: string;
+  quantity: number;
+  addedBy: string;
+  buyingPrice: number;
+}
 
 export interface Product {
   id: string;
@@ -51,10 +61,13 @@ export interface Product {
   bestUsedWhen?: string; // At night or in day
   bestUsedWith?: string; // What you can use together with
   resultsAfter?: string; // Timeframe for results (e.g., a month, a week)
-  // New fields for braids
-  braidType?: string; // e.g., Jibambe, Havana Curl, Normal
-  colorNumber?: string; // e.g., 1, 33, 27, 1/33
-  stockUpdates?: { date: string, quantity: number, addedBy: string }[];
+  // Braid-specific fields
+  braidStyle?: string; // Box Braid, Knotless, Locs, etc.
+  braidLength?: string; // Short, Medium, Long, Extra Long
+  /** @deprecated Use braidStyle — kept for older products */
+  braidType?: string;
+  colorNumber?: string; // e.g., 1, 33, 27, 1/900
+  stockUpdates?: StockBatch[];
 }
 
 export interface RequestedProduct {
@@ -86,9 +99,84 @@ export interface Sale {
   discount?: number;
   createdAt: string;
   clearedAt?: string;
+  /** Shared across items in one web checkout */
+  orderNumber?: string;
+  orderChannel?: OrderChannel;
+  negotiationStatus?: NegotiationStatus;
+  deliveryLocation?: string;
+  deliveryDate?: string;
+  serviceType?: OrderServiceType;
+  deliveryFee?: number;
+  deliveryFeeRange?: string;
+}
+
+export type OrderServiceType = 'payment_delivery' | 'payment_only';
+
+export interface WhatsAppCheckoutDetails {
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  location: string;
+  county: string;
+  deliveryDate: string;
+  paymentMethod: PaymentMethod;
+  serviceType: OrderServiceType;
+  deliveryFee?: number;
+  deliveryFeeRange?: string;
 }
 
 export interface CartItem {
   product: Product;
   quantity: number;
+}
+
+export interface Member {
+  id: string;
+  name: string;
+  phone: string;
+  location?: string;
+  orderCount: number;
+  lastOrderAt: string;
+  lastOrderNumber?: string;
+  joinedAt: string;
+  consentAt?: string;
+}
+
+export type HomeTheme = 'default' | 'pink-thursday' | 'sellout-day';
+
+export interface PromoProductPrice {
+  productId: string;
+  originalPrice: number;
+  promoPrice: number;
+}
+
+export interface PinkThursdayPackage {
+  id: string;
+  label: string;
+  productIds: string[];
+  packagePrice: number;
+}
+
+export interface GlowTip {
+  id: string;
+  title: string;
+  message: string;
+  emoji?: string;
+}
+
+export interface HomePromoConfig {
+  selloutDayActive: boolean;
+  selloutActiveUntil?: string;
+  selloutProducts: PromoProductPrice[];
+  pinkThursdayActive: boolean;
+  pinkThursdayActiveUntil?: string;
+  /** Week numbers of the month (1–5) when Pink Thursday auto-activates on Thursday */
+  pinkThursdayWeeks: number[];
+  pinkThursdayProducts: PromoProductPrice[];
+  pinkThursdayPackages: PinkThursdayPackage[];
+  pinkThursdayTips: GlowTip[];
+  glowTips: GlowTip[];
+  activeGlowTipId?: string;
+  showGlowTipPopup: boolean;
+  updatedAt: string;
 }

@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutDashboard,
   Package,
   Users,
+  Home,
   ShoppingCart,
   BarChart3,
   Search,
@@ -26,27 +27,54 @@ import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  MessageCircle,
   Clock,
+  UserRound,
   CheckCircle2,
   ChevronLeft,
   Key,
   Zap,
-  Upload,
-  ImageIcon as ImageIcon,
-  Filter,
   ClipboardList,
-  Edit2
+  Edit2,
+  Scissors
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CATEGORIES, THEME } from './constants';
-import { Product, Category, Role, Sale, PaymentMethod, Seller, PaymentStatus, CartItem, RequestedProduct } from './types';
+import { BRAND } from './constants/brand';
+import { Product, Category, Role, Sale, PaymentMethod, Seller, PaymentStatus, CartItem, RequestedProduct, WhatsAppCheckoutDetails } from './types';
+import { openCustomerWhatsApp } from './utils/whatsapp';
+import WhatsAppIcon from './components/storefront/WhatsAppIcon';
+import { getAllMembers, fetchMembersForAdmin } from './utils/members';
+import {
+  validateStoredSession,
+  revokeSession,
+  touchSession,
+  requireAdmin,
+  guardAdminAction,
+  getStaffSessionToken,
+  StaffLoginKey,
+} from './utils/auth';
+import { calcWebCartDiscount, calcPosEmployeeDiscount, calcPosAdminDiscount } from './utils/discounts';
+import { sanitizeCustomerName, sanitizePhone } from './utils/sanitize';
+import { toPublicProducts, PublicProduct } from './utils/productPublic';
+import PinLogin from './components/admin/PinLogin';
+import HomePromoPanel from './components/admin/HomePromoPanel';
+import {
+  loadHomePromoConfig,
+  saveHomePromoConfig,
+  fetchHomePromoConfig,
+  persistHomePromoConfig,
+  expireHomePromos,
+  cartUsesPromoPricing,
+  getEffectivePrice,
+} from './utils/homePromos';
+import { HomePromoConfig } from './types';
 import Storefront from './Storefront';
+import InventoryPanel from './components/InventoryPanel';
+import BraidsPanel from './components/BraidsPanel';
+import BraidFilters from './components/BraidFilters';
+import { deductStockFIFO, LOW_STOCK_THRESHOLD, HIGH_STOCK_THRESHOLD } from './utils/inventory';
+import { BraidFilterState, emptyBraidFilters, filterBraidProducts, getBraidStyle } from './utils/braidFilters';
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
-
-// Constants
-const LOW_STOCK_THRESHOLD = 5;
-const HIGH_STOCK_THRESHOLD = 50;
 
 // Mock Data
 const MOCK_PRODUCTS: Product[] = [
@@ -2037,7 +2065,9 @@ const MOCK_PRODUCTS: Product[] = [
     isFixedPrice: true,
     imageUrl: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&h=400&fit=crop',
     createdAt: new Date().toISOString(),
-    braidType: 'Jibambe',
+    braidStyle: 'Knotless',
+    braidLength: 'Long',
+    braidType: 'Knotless',
     colorNumber: '1',
     bestUsedBy: 'Protective styling, knotless braids',
     resultsAfter: 'Can last up to 6 weeks'
@@ -2055,7 +2085,9 @@ const MOCK_PRODUCTS: Product[] = [
     isFixedPrice: true,
     imageUrl: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&h=400&fit=crop',
     createdAt: new Date().toISOString(),
-    braidType: 'Jibambe',
+    braidStyle: 'Box Braid',
+    braidLength: 'Medium',
+    braidType: 'Box Braid',
     colorNumber: '33',
     bestUsedBy: 'Protective styling, knotless braids',
     resultsAfter: 'Can last up to 6 weeks'
@@ -2073,6 +2105,8 @@ const MOCK_PRODUCTS: Product[] = [
     isFixedPrice: true,
     imageUrl: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&h=400&fit=crop',
     createdAt: new Date().toISOString(),
+    braidStyle: 'Havana Curl',
+    braidLength: 'Long',
     braidType: 'Havana Curl',
     colorNumber: '27',
     bestUsedBy: 'Crochet styles, voluminous curls',
@@ -2226,9 +2260,7 @@ export default function App() {
   const [activeEmployee, setActiveEmployee] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('sales');
   const [selectedCategory, setSelectedCategory] = useState<Category>('All');
-  const [inventoryCategory, setInventoryCategory] = useState<Category>('All');
-  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
-  const [showHighStockOnly, setShowHighStockOnly] = useState(false);
+  const [braidFilters, setBraidFilters] = useState<BraidFilterState>(emptyBraidFilters());
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedProductForSale, setSelectedProductForSale] = useState<Product | null>(null);
@@ -2246,8 +2278,6 @@ export default function App() {
   const [sales, setSales] = useState<Sale[]>(MOCK_SALES);
   const [sellers, setSellers] = useState<Seller[]>(MOCK_SELLERS);
   const [agents, setAgents] = useState<string[]>(INITIAL_AGENTS);
-  const [isAddingProduct, setIsAddingProduct] = useState(false);
-  const [isAddingOn, setIsAddingOn] = useState(false);
   const [isAddingSeller, setIsAddingSeller] = useState(false);
   const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
   const [isAddingAgent, setIsAddingAgent] = useState(false);
@@ -2262,28 +2292,7 @@ export default function App() {
     contact: '',
     whatsappNumber: ''
   });
-  const [addOnSearchQuery, setAddOnSearchQuery] = useState('');
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [pin, setPin] = useState('');
-  const [loginMode, setLoginMode] = useState<'select' | 'pin'>('select');
-  const [loginTarget, setLoginTarget] = useState<'admin' | 'Employee 1' | 'Employee 2' | null>(null);
-  const EMP_PINS: Record<string, string> = { 'Employee 1': '1111', 'Employee 2': '2222' };
-  const [newProductData, setNewProductData] = useState({
-    name: '',
-    brand: '',
-    category: 'Other' as Category,
-    quantity: 0,
-    buyingPrice: 0,
-    sellingPrice: 0,
-    imageUrl: '',
-    bestUsedBy: '',
-    bestUsedWhen: '',
-    bestUsedWith: '',
-    resultsAfter: '',
-    braidType: '',
-    colorNumber: ''
-  });
-  const [addOnData, setAddOnData] = useState({ productId: '', quantity: 0 });
+  const [authChecking, setAuthChecking] = useState(true);
   const [requestedProducts, setRequestedProducts] = useState<RequestedProduct[]>([]);
   const [isRequestingProduct, setIsRequestingProduct] = useState(false);
   const [requestedProductName, setRequestedProductName] = useState('');
@@ -2295,8 +2304,80 @@ export default function App() {
   const [checkoutCustomerName, setCheckoutCustomerName] = useState('');
   const [checkoutCustomerPhone, setCheckoutCustomerPhone] = useState('');
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<PaymentMethod>('Mpesa');
+  const [homePromoConfig, setHomePromoConfig] = useState<HomePromoConfig>(() => loadHomePromoConfig());
+  const [adminMembers, setAdminMembers] = useState<ReturnType<typeof getAllMembers>>([]);
 
-  const ADMIN_PIN = '5063';
+  const publicProducts = useMemo(() => toPublicProducts(products), [products]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchHomePromoConfig().then((cfg) => {
+      if (!cancelled) setHomePromoConfig(cfg);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'members' || role !== 'admin') return;
+    const token = getStaffSessionToken();
+    if (!token) return;
+    fetchMembersForAdmin(token).then(setAdminMembers);
+  }, [activeTab, role, isAuthenticated]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const session = await validateStoredSession();
+      if (cancelled) return;
+      if (session) {
+        setRole(session.role);
+        setActiveEmployee(session.role === 'staff' ? session.displayName : null);
+        setIsAuthenticated(true);
+      }
+      setAuthChecking(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const onActivity = () => touchSession();
+    const interval = setInterval(async () => {
+      const session = await validateStoredSession();
+      if (!session) {
+        setIsAuthenticated(false);
+        setActiveEmployee(null);
+        showNotification('Session expired — please sign in again');
+      }
+    }, 60000);
+    window.addEventListener('click', onActivity);
+    window.addEventListener('keydown', onActivity);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('click', onActivity);
+      window.removeEventListener('keydown', onActivity);
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const tick = () => {
+      setHomePromoConfig((prev) => {
+        const next = expireHomePromos(prev);
+        if (
+          next.pinkThursdayActive !== prev.pinkThursdayActive ||
+          next.selloutDayActive !== prev.selloutDayActive ||
+          next.pinkThursdayActiveUntil !== prev.pinkThursdayActiveUntil ||
+          next.selloutActiveUntil !== prev.selloutActiveUntil
+        ) {
+          return next;
+        }
+        return prev;
+      });
+    };
+    const interval = setInterval(tick, 30000);
+    tick();
+    return () => clearInterval(interval);
+  }, []);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -2326,6 +2407,11 @@ export default function App() {
     showNotification('Added to cart', 'success');
   };
 
+  const addPublicToCart = (publicProduct: PublicProduct) => {
+    const full = products.find((p) => p.id === publicProduct.id);
+    if (full) addToCart(full);
+  };
+
   const removeFromCart = (productId: string) => {
     setCart(prev => prev.filter(item => item.product.id !== productId));
   };
@@ -2341,21 +2427,48 @@ export default function App() {
   };
 
   const cartTotalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartSubtotal = cart.reduce((sum, item) => sum + (item.product.sellingPrice * item.quantity), 0);
-  const cartDiscount = cartTotalItems >= 3 ? 20 : (cartTotalItems >= 2 ? 10 : 0);
+  const promoCart = useMemo(
+    () => cartUsesPromoPricing(cart, homePromoConfig),
+    [cart, homePromoConfig]
+  );
+  const cartSubtotal = promoCart.subtotal;
+  const promoSavings = promoCart.savings;
+  const cartDiscount = calcWebCartDiscount(cart);
   const cartTotal = cartSubtotal - cartDiscount;
 
-  const handleCheckout = () => {
+  const handleCheckout = (whatsappDetails?: WhatsAppCheckoutDetails) => {
     if (cart.length === 0) return;
 
-    const newSales: Sale[] = cart.map(item => {
-      // Distribute discount proportionally or just apply to the first item for simplicity.
-      // We'll apply the 10 Ksh discount to the first item if applicable.
-      const isFirstItem = cart.indexOf(item) === 0;
-      const itemDiscount = (isFirstItem && cartDiscount > 0) ? cartDiscount : 0;
+    let updatedProducts = [...products];
+    const isWhatsAppOrder = Boolean(whatsappDetails);
 
-      const totalPrice = (item.product.sellingPrice * item.quantity) - itemDiscount;
-      const totalProfit = ((item.product.sellingPrice - item.product.lastPrice) * item.quantity) - itemDiscount;
+    const newSales: Sale[] = cart.map((item, index) => {
+      const isFirstItem = index === 0;
+      const itemDiscount = isFirstItem && cartDiscount > 0 ? cartDiscount : 0;
+      const pIndex = updatedProducts.findIndex((p) => p.id === item.product.id);
+      const product = pIndex >= 0 ? updatedProducts[pIndex] : item.product;
+      const fifo = isWhatsAppOrder
+        ? {
+            stockQuantity: product.stockQuantity,
+            stockUpdates: product.stockUpdates ?? [],
+            consumedBuyingPrice: product.lastPrice,
+          }
+        : deductStockFIFO(product, item.quantity);
+
+      if (!isWhatsAppOrder && pIndex >= 0) {
+        updatedProducts[pIndex] = {
+          ...product,
+          stockQuantity: fifo.stockQuantity,
+          stockUpdates: fifo.stockUpdates,
+        };
+      }
+
+      const unitPrice = getEffectivePrice(item.product, homePromoConfig).current;
+      const deliveryFee = isFirstItem && isWhatsAppOrder ? (whatsappDetails?.deliveryFee ?? 0) : 0;
+      const totalPrice = unitPrice * item.quantity - itemDiscount + deliveryFee;
+      const totalProfit = isWhatsAppOrder
+        ? 0
+        : (unitPrice - fifo.consumedBuyingPrice) * item.quantity - itemDiscount;
 
       return {
         id: Math.random().toString(36).substr(2, 9),
@@ -2363,43 +2476,84 @@ export default function App() {
         productName: item.product.name,
         brand: item.product.brand,
         quantity: item.quantity,
-        sellingPrice: item.product.sellingPrice,
-        buyingPrice: item.product.lastPrice,
+        sellingPrice: unitPrice,
+        buyingPrice: fifo.consumedBuyingPrice,
         profit: totalProfit,
-        paymentMethod: checkoutPaymentMethod,
-        paymentStatus: 'Paid',
-        amountPaid: totalPrice,
-        debtAmount: 0,
+        paymentMethod: whatsappDetails?.paymentMethod ?? checkoutPaymentMethod,
+        paymentStatus: (isWhatsAppOrder ? 'Deposit' : 'Paid') as PaymentStatus,
+        amountPaid: isWhatsAppOrder ? 0 : totalPrice,
+        debtAmount: isWhatsAppOrder ? totalPrice : 0,
         staffId: 'online',
-        staffName: 'Online Order',
+        staffName: 'Web Order',
         sellerName: 'Online',
-        customerName: checkoutCustomerName.trim() || undefined,
-        customerPhone: checkoutCustomerPhone.trim() || undefined,
+        customerName: (whatsappDetails?.customerName ?? checkoutCustomerName).trim() || undefined,
+        customerPhone: (whatsappDetails?.customerPhone ?? checkoutCustomerPhone).trim() || undefined,
         discount: itemDiscount > 0 ? itemDiscount : undefined,
         createdAt: new Date().toISOString(),
+        orderNumber: whatsappDetails?.orderNumber,
+        orderChannel: isWhatsAppOrder ? 'whatsapp' : undefined,
+        negotiationStatus: isWhatsAppOrder ? 'Pending' : undefined,
+        deliveryLocation: whatsappDetails?.county ?? whatsappDetails?.location,
+        deliveryDate: whatsappDetails?.deliveryDate,
+        serviceType: whatsappDetails?.serviceType,
+        deliveryFee: isFirstItem ? whatsappDetails?.deliveryFee : undefined,
+        deliveryFeeRange: isFirstItem ? whatsappDetails?.deliveryFeeRange : undefined,
       };
     });
 
     setSales([...newSales, ...sales]);
-
-    // Update stock
-    const updatedProducts = [...products];
-    cart.forEach(item => {
-      const pIndex = updatedProducts.findIndex(p => p.id === item.product.id);
-      if (pIndex >= 0) {
-        updatedProducts[pIndex] = {
-          ...updatedProducts[pIndex],
-          stockQuantity: updatedProducts[pIndex].stockQuantity - item.quantity
-        };
-      }
-    });
-    setProducts(updatedProducts);
-
+    if (!isWhatsAppOrder) setProducts(updatedProducts);
     setCart([]);
     setIsCartOpen(false);
     setCheckoutCustomerName('');
     setCheckoutCustomerPhone('');
-    showNotification('Order placed successfully!', 'success');
+    showNotification(
+      isWhatsAppOrder
+        ? `Order ${whatsappDetails!.orderNumber} sent via Connect to ${BRAND.whatsappDisplay}!`
+        : 'Order placed successfully!',
+      'success'
+    );
+  };
+
+  const handleConfirmWhatsAppOrder = async (orderNumber: string) => {
+    const session = await guardAdminAction('confirm_whatsapp_order', showNotification);
+    if (!session) return;
+    const orderLines = sales.filter((s) => s.orderNumber === orderNumber);
+    if (!orderLines.length) return;
+
+    const buyingBySaleId = new Map<string, number>();
+    let updatedProducts = [...products];
+    for (const sale of orderLines) {
+      const pIndex = updatedProducts.findIndex((p) => p.id === sale.productId);
+      if (pIndex < 0) continue;
+      const fifo = deductStockFIFO(updatedProducts[pIndex], sale.quantity);
+      buyingBySaleId.set(sale.id, fifo.consumedBuyingPrice);
+      updatedProducts[pIndex] = {
+        ...updatedProducts[pIndex],
+        stockQuantity: fifo.stockQuantity,
+        stockUpdates: fifo.stockUpdates,
+      };
+    }
+    setProducts(updatedProducts);
+
+    setSales(
+      sales.map((s) => {
+        if (s.orderNumber !== orderNumber) return s;
+        const buyingPrice = buyingBySaleId.get(s.id) ?? s.buyingPrice;
+        const profit = (s.sellingPrice - buyingPrice) * s.quantity - (s.discount || 0);
+        return {
+          ...s,
+          buyingPrice,
+          profit,
+          negotiationStatus: 'Confirmed' as const,
+          paymentStatus: 'Paid' as const,
+          amountPaid: s.sellingPrice * s.quantity - (s.discount || 0) + (s.deliveryFee || 0),
+          debtAmount: 0,
+          clearedAt: new Date().toISOString(),
+        };
+      })
+    );
+    showNotification(`Order ${orderNumber} confirmed — stock updated`, 'success');
   };
 
   const visibleSales = useMemo(() => {
@@ -2408,21 +2562,25 @@ export default function App() {
   }, [sales, role, activeEmployee]);
 
   const filteredProducts = useMemo(() => {
-    let result = products.filter(p => {
+    if (selectedCategory === 'Braids') {
+      return filterBraidProducts(products, braidFilters);
+    }
+
+    const result = products.filter((p) => {
       const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.brand.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.brand.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
 
     return result.sort((a, b) => {
       const dateA = a.createdAt.split('T')[0];
       const dateB = b.createdAt.split('T')[0];
-      if (dateA !== dateB) {
-        return dateB.localeCompare(dateA); // Newest date first
-      }
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
       return a.name.localeCompare(b.name);
     });
-  }, [products, selectedCategory, searchQuery]);
+  }, [products, selectedCategory, searchQuery, braidFilters]);
 
   const weeklyTotals = useMemo(() => {
     const oneWeekAgo = new Date();
@@ -2551,19 +2709,6 @@ export default function App() {
     }).sort((a, b) => b.performance - a.performance);
   }, [products, sales]);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewProductData({ ...newProductData, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleRecordSale = () => {
     if (!selectedProductForSale || !paymentMethod) return;
 
@@ -2572,10 +2717,16 @@ export default function App() {
       return;
     }
 
-    const totalPrice = (selectedProductForSale.sellingPrice * saleQuantity) - discount;
+    const appliedDiscount =
+      role === 'admin'
+        ? calcPosAdminDiscount(discount, selectedProductForSale)
+        : calcPosEmployeeDiscount(selectedProductForSale, saleQuantity);
+
+    const fifo = deductStockFIFO(selectedProductForSale, saleQuantity);
+    const totalPrice = selectedProductForSale.sellingPrice * saleQuantity - appliedDiscount;
     const debtAmount = totalPrice - amountPaid;
-    // Profit is reduced by the discount
-    const totalProfit = ((selectedProductForSale.sellingPrice - selectedProductForSale.lastPrice) * saleQuantity) - discount;
+    const totalProfit =
+      (selectedProductForSale.sellingPrice - fifo.consumedBuyingPrice) * saleQuantity - appliedDiscount;
 
     const newSale: Sale = {
       id: Math.random().toString(36).substr(2, 9),
@@ -2584,7 +2735,7 @@ export default function App() {
       brand: selectedProductForSale.brand,
       quantity: saleQuantity,
       sellingPrice: selectedProductForSale.sellingPrice,
-      buyingPrice: selectedProductForSale.lastPrice,
+      buyingPrice: fifo.consumedBuyingPrice,
       profit: totalProfit,
       paymentMethod: paymentMethod,
       paymentStatus: paymentStatus,
@@ -2593,32 +2744,19 @@ export default function App() {
       staffId: 'u1',
       staffName: activeEmployee || 'Staff',
       sellerName: role === 'admin' ? selectedSeller : (activeEmployee || selectedSeller),
-      customerName: customerName.trim() || undefined,
-      customerPhone: customerPhone.trim() || undefined,
-      discount: discount > 0 ? discount : undefined,
+      customerName: sanitizeCustomerName(customerName.trim()) || undefined,
+      customerPhone: sanitizePhone(customerPhone.trim()) || undefined,
+      discount: appliedDiscount > 0 ? appliedDiscount : undefined,
       createdAt: new Date().toISOString(),
     };
 
     setSales([newSale, ...sales]);
     setProducts(products.map(p => {
       if (p.id === selectedProductForSale.id) {
-        let remainingToDeduct = saleQuantity;
-        let newStockUpdates = [...(p.stockUpdates || [])];
-
-        while (remainingToDeduct > 0 && newStockUpdates.length > 0) {
-          if (newStockUpdates[0].quantity <= remainingToDeduct) {
-            remainingToDeduct -= newStockUpdates[0].quantity;
-            newStockUpdates.shift(); // Remove the oldest batch fully
-          } else {
-            newStockUpdates[0] = { ...newStockUpdates[0], quantity: newStockUpdates[0].quantity - remainingToDeduct };
-            remainingToDeduct = 0;
-          }
-        }
-
         return {
           ...p,
-          stockQuantity: p.stockQuantity - saleQuantity,
-          stockUpdates: newStockUpdates
+          stockQuantity: fifo.stockQuantity,
+          stockUpdates: fifo.stockUpdates,
         };
       }
       return p;
@@ -2633,7 +2771,9 @@ export default function App() {
     setReceiptSale(newSale); // Show receipt after sale
   };
 
-  const handleClearDebt = (saleId: string) => {
+  const handleClearDebt = async (saleId: string) => {
+    const session = await guardAdminAction('clear_debt', showNotification);
+    if (!session) return;
     setSales(sales.map(s => {
       if (s.id === saleId) {
         return {
@@ -2653,7 +2793,9 @@ export default function App() {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const handleSaveSeller = () => {
+  const handleSaveSeller = async () => {
+    const session = await guardAdminAction('save_seller', showNotification);
+    if (!session) return;
     if (!sellerFormData.name || !sellerFormData.productName) return;
 
     if (editingSeller) {
@@ -2677,7 +2819,9 @@ export default function App() {
     setSellerFormData({ name: '', productName: '', amount: 0, contact: '', whatsappNumber: '' });
   };
 
-  const handleDeleteSeller = (id: string) => {
+  const handleDeleteSeller = async (id: string) => {
+    const session = await guardAdminAction('delete_seller', showNotification);
+    if (!session) return;
     setConfirmDialog({
       message: 'Are you sure you want to delete this wholesaler?',
       onConfirm: () => {
@@ -2688,7 +2832,9 @@ export default function App() {
     });
   };
 
-  const handleAddAgent = () => {
+  const handleAddAgent = async () => {
+    const session = await guardAdminAction('save_agent', showNotification);
+    if (!session) return;
     if (!newAgentName.trim()) return;
 
     if (editingAgent) {
@@ -2715,7 +2861,9 @@ export default function App() {
     setEditingAgent(null);
   };
 
-  const handleDeleteAgent = (name: string) => {
+  const handleDeleteAgent = async (name: string) => {
+    const session = await guardAdminAction('delete_agent', showNotification);
+    if (!session) return;
     if (name === 'Staff') {
       showNotification('Cannot delete the default Staff agent');
       return;
@@ -2748,16 +2896,56 @@ export default function App() {
     }
   };
 
-  const NavItem = ({ id, icon: Icon, label }: { id: string, icon: any, label: string }) => (
+  const PAGE_TITLES: Record<string, string> = {
+    dashboard: 'Dashboard',
+    braids: 'Braids',
+    summary: 'Sales Summary',
+    inventory: role === 'admin' ? 'Inventory' : 'Stock Check',
+    sellers: 'Sellers',
+    reports: 'Profit Reports',
+    sales: 'Sales History',
+    members: 'Members',
+    'home-promos': 'Home & Promos',
+  };
+
+  const NavItem = ({ id, icon: Icon, label }: { id: string; icon: React.ComponentType<{ size?: number }>; label: string }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === id
-          ? 'bg-pink-100 text-pink-600 font-semibold shadow-sm'
-          : 'text-gray-500 hover:bg-pink-50 hover:text-pink-400'
-        }`}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm ${
+        activeTab === id
+          ? 'bg-pink-500 text-white font-semibold shadow-lg shadow-pink-500/30'
+          : 'text-gray-400 hover:bg-white/10 hover:text-white'
+      }`}
     >
-      <Icon size={20} />
+      <Icon size={18} />
       <span>{label}</span>
+    </button>
+  );
+
+  const NavSection = ({ title }: { title: string }) => (
+    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-4 pt-4 pb-1">{title}</p>
+  );
+
+  const QuickAction = ({
+    icon: Icon,
+    label,
+    desc,
+    onClick,
+  }: {
+    icon: React.ComponentType<{ size?: number }>;
+    label: string;
+    desc: string;
+    onClick: () => void;
+  }) => (
+    <button
+      onClick={onClick}
+      className="bg-white border border-gray-100 rounded-2xl p-5 text-left hover:border-pink-300 hover:shadow-lg hover:shadow-pink-100/50 transition-all group"
+    >
+      <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-pink-500 mb-3 group-hover:bg-pink-500 group-hover:text-white transition-colors">
+        <Icon size={20} />
+      </div>
+      <p className="font-bold text-gray-900 text-sm">{label}</p>
+      <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
     </button>
   );
 
@@ -2766,9 +2954,9 @@ export default function App() {
       return (
         <>
           <Storefront
-            products={products}
+            products={publicProducts}
             cart={cart}
-            addToCart={addToCart}
+            addToCart={addPublicToCart}
             removeFromCart={removeFromCart}
             updateCartQuantity={updateCartQuantity}
             cartTotalItems={cartTotalItems}
@@ -2785,6 +2973,9 @@ export default function App() {
             setCheckoutPaymentMethod={setCheckoutPaymentMethod}
             handleCheckout={handleCheckout}
             onAdminLoginClick={() => setShowLogin(true)}
+            homePromoConfig={homePromoConfig}
+            promoSubtotal={cartSubtotal}
+            promoSavings={promoSavings}
           />
           {/* Notification Toast */}
           <AnimatePresence>
@@ -2828,166 +3019,24 @@ export default function App() {
           </button>
 
           <div className="w-24 h-24 bg-black rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-black/20 mt-4 overflow-hidden">
-            <img src="/logo.jpg" alt="Babyghal Logo" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
-            <span className="text-[#d4af37] text-5xl font-serif italic hidden">B</span>
+            <img src="/logo.jpg" alt="BLUMERA Logo" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
+            <span className="text-pink-500 text-5xl font-black hidden">B</span>
           </div>
 
-          <h1 className="text-4xl font-display font-black text-gray-800 mb-1">Babyghal</h1>
-          <p className="text-pink-500 font-serif italic text-xl mb-8">beauty shop</p>
+          <h1 className="text-4xl font-display font-black text-gray-900 mb-1">{BRAND.systemName}</h1>
+          <p className="text-pink-500 font-bold text-sm tracking-wide mb-1">{BRAND.tagline}</p>
+          <p className="text-gray-500 font-medium text-lg mb-8">{BRAND.shopName}</p>
 
-          <AnimatePresence mode="wait">
-            {loginMode === 'select' ? (
-              <motion.div
-                key="select"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="space-y-4"
-              >
-                <p className="text-gray-500 mb-6 font-medium">Please select your role to continue</p>
-
-                <button
-                  onClick={() => {
-                    setLoginTarget('Employee 1');
-                    setLoginMode('pin');
-                  }}
-                  className="w-full flex items-center justify-between p-6 bg-pink-50 rounded-3xl hover:bg-pink-100 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-pink-500 shadow-sm">
-                      <Users size={24} />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-black text-gray-800">Employee 1</p>
-                      <p className="text-xs text-gray-400">Access sales & inventory</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="text-pink-300 group-hover:text-pink-500 transition-colors" />
-                </button>
-
-                <button
-                  onClick={() => {
-                    setLoginTarget('Employee 2');
-                    setLoginMode('pin');
-                  }}
-                  className="w-full flex items-center justify-between p-6 bg-pink-50 rounded-3xl hover:bg-pink-100 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-pink-500 shadow-sm">
-                      <Users size={24} />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-black text-gray-800">Employee 2</p>
-                      <p className="text-xs text-gray-400">Access sales & inventory</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="text-pink-300 group-hover:text-pink-500 transition-colors" />
-                </button>
-
-                <button
-                  onClick={() => {
-                    setLoginTarget('admin');
-                    setLoginMode('pin');
-                  }}
-                  className="w-full flex items-center justify-between p-6 bg-gray-50 rounded-3xl hover:bg-gray-100 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-500 shadow-sm">
-                      <Lock size={24} />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-black text-gray-800">Administrator</p>
-                      <p className="text-xs text-gray-400">Full system access</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="text-gray-300 group-hover:text-gray-500 transition-colors" />
-                </button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="pin"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <button
-                    onClick={() => setLoginMode('select')}
-                    className="p-2 hover:bg-gray-100 rounded-xl text-gray-400"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-                  <p className="text-gray-500 font-medium">Enter {loginTarget === 'admin' ? 'Admin' : loginTarget} PIN</p>
-                </div>
-
-                <div className="flex justify-center gap-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`w-12 h-16 rounded-2xl border-2 flex items-center justify-center text-2xl font-black transition-all ${pin.length > i ? 'border-pink-500 bg-pink-50 text-pink-600' : 'border-pink-100 text-gray-200'}`}
-                    >
-                      {pin.length > i ? '•' : ''}
-                    </div>
-                  ))}
-                </div>
-
-                <input
-                  type="password"
-                  maxLength={4}
-                  value={pin}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    setPin(val);
-                    const isSuccess = loginTarget === 'admin' ? val === ADMIN_PIN : (loginTarget && val === EMP_PINS[loginTarget]);
-                    if (isSuccess) {
-                      setRole(loginTarget === 'admin' ? 'admin' : 'staff');
-                      setIsAdminAuthenticated(loginTarget === 'admin');
-                      setActiveEmployee(loginTarget === 'admin' ? null : loginTarget);
-                      setIsAuthenticated(true);
-                      setPin('');
-                    } else if (val.length === 4) {
-                      showNotification('Incorrect PIN');
-                      setPin('');
-                    }
-                  }}
-                  autoFocus
-                  className="absolute opacity-0 pointer-events-none"
-                />
-
-                <div className="grid grid-cols-3 gap-4 pt-4">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, '←'].map((num, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => {
-                        if (num === 'C') setPin('');
-                        else if (num === '←') setPin(pin.slice(0, -1));
-                        else if (typeof num === 'number' && pin.length < 4) {
-                          const newVal = pin + num;
-                          setPin(newVal);
-                          const isSuccess = loginTarget === 'admin' ? newVal === ADMIN_PIN : (loginTarget && newVal === EMP_PINS[loginTarget]);
-                          if (isSuccess) {
-                            setRole(loginTarget === 'admin' ? 'admin' : 'staff');
-                            setIsAdminAuthenticated(loginTarget === 'admin');
-                            setActiveEmployee(loginTarget === 'admin' ? null : loginTarget);
-                            setIsAuthenticated(true);
-                            setPin('');
-                          } else if (newVal.length === 4) {
-                            showNotification('Incorrect PIN');
-                            setPin('');
-                          }
-                        }
-                      }}
-                      className="h-16 rounded-2xl bg-pink-50 text-xl font-black text-pink-600 hover:bg-pink-100 active:scale-95 transition-all"
-                    >
-                      {num}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <PinLogin
+            onSuccess={({ role: r, displayName, loginKey }: { role: Role; displayName: string; loginKey: StaffLoginKey }) => {
+              setRole(r);
+              setActiveEmployee(r === 'staff' ? displayName : null);
+              setIsAuthenticated(true);
+              setShowLogin(false);
+              showNotification(`Welcome, ${displayName}`, 'success');
+            }}
+            onError={(msg) => showNotification(msg)}
+          />
         </motion.div>
       </div>
     );
@@ -2999,78 +3048,93 @@ export default function App() {
       <motion.aside
         initial={false}
         animate={{ width: isSidebarOpen ? 260 : 0, opacity: isSidebarOpen ? 1 : 0 }}
-        className="bg-white border-r border-pink-100 overflow-hidden flex flex-col"
+        className="admin-sidebar border-r border-gray-800 overflow-hidden flex flex-col shrink-0"
       >
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-pink-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-pink-200">
-              <span className="text-xl font-display italic">B</span>
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 bg-pink-500 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg shadow-pink-500/40">
+              B
             </div>
-            <h1 className="text-xl font-display font-black text-pink-600 whitespace-nowrap">Babyghal</h1>
+            <div>
+              <h1 className="text-lg font-display font-black text-white whitespace-nowrap">{BRAND.systemName}</h1>
+              <p className="text-[10px] text-pink-400 font-bold">{BRAND.tagline}</p>
+            </div>
           </div>
-          <p className="text-[10px] text-pink-400 font-serif italic tracking-widest uppercase pl-1">beauty shop</p>
+          <p className="text-[10px] text-gray-500 pl-[52px]">{BRAND.shopName}</p>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-4">
+        <nav className="flex-1 px-3 space-y-0.5 mt-2 overflow-y-auto">
+          <NavSection title="Overview" />
           <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" />
-          {role === 'admin' && (
+          <NavItem id="braids" icon={Scissors} label="Braids" />
+          <NavItem id="sales" icon={ShoppingCart} label="Sales History" />
+
+          {role === 'admin' ? (
             <>
-              <NavItem id="summary" icon={TrendingUp} label="Sales Summary" />
+              <NavSection title="Management" />
               <NavItem id="inventory" icon={Package} label="Inventory" />
+              <NavItem id="members" icon={UserRound} label="Members" />
+              <NavItem id="home-promos" icon={Home} label="Home & Promos" />
               <NavItem id="sellers" icon={Users} label="Sellers" />
+              <NavSection title="Reports" />
+              <NavItem id="summary" icon={TrendingUp} label="Sales Summary" />
               <NavItem id="reports" icon={BarChart3} label="Profit Reports" />
             </>
+          ) : (
+            <>
+              <NavSection title="Stock" />
+              <NavItem id="inventory" icon={Package} label="Stock Check" />
+            </>
           )}
-          {role === 'staff' && (
-            <NavItem id="inventory" icon={Package} label="Inventory" />
-          )}
-          <NavItem id="sales" icon={ShoppingCart} label="Sales History" />
         </nav>
 
-        <div className="p-4 border-t border-pink-50">
+        <div className="p-4 border-t border-white/10">
           <button
             onClick={() => {
+              void revokeSession();
               setIsAuthenticated(false);
-              setIsAdminAuthenticated(false);
-              setLoginMode('select');
+              setActiveEmployee(null);
             }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-all font-medium"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/10 hover:text-white transition-all font-medium text-sm"
           >
-            <LogOut size={20} />
+            <LogOut size={18} />
             <span>Logout</span>
           </button>
         </div>
       </motion.aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-pink-50/30">
-        {/* Header */}
-        <header className="h-20 bg-white border-b border-pink-100 px-6 flex items-center justify-between">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden admin-main">
+        <header className="h-[72px] bg-white border-b border-gray-100 px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 hover:bg-pink-50 rounded-xl text-pink-500 transition-all"
+              className="p-2 hover:bg-gray-100 rounded-xl text-gray-700 transition-all"
             >
-              <Menu size={24} />
+              <Menu size={22} />
             </button>
             <div>
-              <h2 className="text-2xl font-display font-black text-gray-800">Babyghal beauty shop</h2>
-              <p className="text-xs text-gray-400 font-medium">Welcome back, <span className="text-pink-500 font-bold capitalize">{role === 'admin' ? 'Admin' : activeEmployee || 'Staff'}</span></p>
+              <h2 className="text-xl font-display font-black text-gray-900">
+                {PAGE_TITLES[activeTab] || 'Dashboard'}
+              </h2>
+              <p className="text-xs text-gray-500">
+                {BRAND.systemName} · <span className="text-pink-500 font-semibold capitalize">{role === 'admin' ? 'Admin' : activeEmployee || 'Staff'}</span>
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          {(activeTab === 'dashboard' || activeTab === 'inventory' || activeTab === 'braids') && (
+            <div className="relative hidden sm:block">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <input
                 type="text"
-                placeholder="Search products or brands..."
+                placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all w-64"
+                className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-pink-300 outline-none w-56"
               />
             </div>
-          </div>
+          )}
         </header>
 
         {/* Scrollable Content */}
@@ -3097,12 +3161,7 @@ export default function App() {
                           </div>
                         </div>
                         <button
-                          onClick={() => {
-                            setActiveTab('inventory');
-                            setInventoryCategory('All');
-                            setShowLowStockOnly(true);
-                            setShowHighStockOnly(false);
-                          }}
+                          onClick={() => setActiveTab('inventory')}
                           className="px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 text-sm font-bold rounded-xl transition-colors"
                         >
                           View Inventory
@@ -3121,18 +3180,22 @@ export default function App() {
                           </div>
                         </div>
                         <button
-                          onClick={() => {
-                            setActiveTab('inventory');
-                            setInventoryCategory('All');
-                            setShowHighStockOnly(true);
-                            setShowLowStockOnly(false);
-                          }}
+                          onClick={() => setActiveTab('inventory')}
                           className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-bold rounded-xl transition-colors"
                         >
                           View Inventory
                         </button>
                       </div>
                     )}
+
+                    {/* Quick navigation */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                      <QuickAction icon={Package} label="Inventory" desc="Add & manage products" onClick={() => setActiveTab('inventory')} />
+                      <QuickAction icon={Scissors} label="Braids" desc="Filter braid catalog" onClick={() => setActiveTab('braids')} />
+                      <QuickAction icon={TrendingUp} label="Sales Summary" desc="Revenue overview" onClick={() => setActiveTab('summary')} />
+                      <QuickAction icon={BarChart3} label="Profit Reports" desc="Margin analytics" onClick={() => setActiveTab('reports')} />
+                      <QuickAction icon={ShoppingCart} label="Sales History" desc="All transactions" onClick={() => setActiveTab('sales')} />
+                    </div>
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -3341,6 +3404,35 @@ export default function App() {
 
                 {role === 'staff' && (
                   <div className="space-y-6">
+                    <div className="bg-black text-white rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-48 h-48 bg-pink-500/20 rounded-full blur-3xl" />
+                      <div className="relative">
+                        <p className="text-pink-400 text-xs font-bold uppercase tracking-widest mb-1">{BRAND.tagline}</p>
+                        <h3 className="text-2xl font-display font-black mb-1">Welcome, {activeEmployee}</h3>
+                        <p className="text-gray-400 text-sm">{BRAND.shopName} · Record sales & check stock</p>
+                        <div className="flex flex-wrap gap-3 mt-5">
+                          <button
+                            onClick={() => setActiveTab('dashboard')}
+                            className="px-4 py-2 bg-pink-500 rounded-xl text-sm font-bold hover:bg-pink-400 transition-colors"
+                          >
+                            Record Sale
+                          </button>
+                          <button
+                            onClick={() => setActiveTab('braids')}
+                            className="px-4 py-2 bg-white/10 rounded-xl text-sm font-bold hover:bg-white/20 transition-colors"
+                          >
+                            Browse Braids
+                          </button>
+                          <button
+                            onClick={() => setActiveTab('inventory')}
+                            className="px-4 py-2 bg-white/10 rounded-xl text-sm font-bold hover:bg-white/20 transition-colors"
+                          >
+                            Stock Check
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Staff Daily Summary */}
                     <div className="bg-white p-6 rounded-3xl shadow-sm border border-pink-100 mb-8">
                       <div className="flex items-center justify-between mb-6">
@@ -3385,13 +3477,16 @@ export default function App() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
                       <h3 className="text-xl font-black text-gray-800">Quick Record Sale</h3>
                       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                         {CATEGORIES.map(cat => (
                           <button
                             key={cat}
-                            onClick={() => setSelectedCategory(cat)}
+                            onClick={() => {
+                              setSelectedCategory(cat);
+                              if (cat !== 'Braids') setBraidFilters(emptyBraidFilters());
+                            }}
                             className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === cat
                                 ? 'bg-pink-500 text-white shadow-md shadow-pink-200'
                                 : 'bg-white text-gray-500 border border-pink-100 hover:border-pink-300'
@@ -3402,6 +3497,15 @@ export default function App() {
                         ))}
                       </div>
                     </div>
+
+                    {selectedCategory === 'Braids' && (
+                      <BraidFilters
+                        filters={braidFilters}
+                        onChange={setBraidFilters}
+                        resultCount={filteredProducts.length}
+                        compact
+                      />
+                    )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {filteredProducts.map(product => (
@@ -3422,9 +3526,9 @@ export default function App() {
                           <h4 className="font-bold text-gray-800 text-sm line-clamp-1">{product.name}</h4>
                           <div className="flex items-center gap-2 mb-3">
                             <p className="text-[10px] text-gray-400 font-medium">{product.brand}</p>
-                            {product.braidType && (
+                            {getBraidStyle(product) && (
                               <span className="text-[8px] font-bold bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded uppercase">
-                                {product.braidType} {product.colorNumber && `(${product.colorNumber})`}
+                                {getBraidStyle(product)}{product.braidLength ? ` · ${product.braidLength}` : ''}{product.colorNumber ? ` (#${product.colorNumber})` : ''}
                               </span>
                             )}
                           </div>
@@ -3851,13 +3955,29 @@ export default function App() {
                           <td className="px-6 py-4">
                             {sale.customerName ? (
                               <>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <p className="text-xs font-bold text-gray-700">{sale.customerName}</p>
+                                  {sale.orderChannel === 'whatsapp' && (
+                                    <span className="text-[8px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase inline-flex items-center gap-0.5">
+                                      <WhatsAppIcon size={10} /> Connect
+                                    </span>
+                                  )}
                                   {sale.paymentStatus === 'Debt' && (
                                     <span className="text-[8px] font-black bg-red-100 text-red-600 px-1.5 py-0.5 rounded uppercase">Debt Owner</span>
                                   )}
                                 </div>
                                 {sale.customerPhone && <p className="text-[10px] text-gray-400">{sale.customerPhone}</p>}
+                                {sale.deliveryLocation && (
+                                  <p className="text-[10px] text-gray-400">{sale.deliveryLocation}</p>
+                                )}
+                                {sale.serviceType && (
+                                  <p className="text-[10px] text-pink-400 font-semibold">
+                                    {sale.serviceType === 'payment_delivery' ? 'Payment + Delivery' : 'Payment only'}
+                                    {sale.deliveryFee != null && sale.deliveryFee > 0 && (
+                                      <span className="text-amber-600"> · Del. est. KSh {sale.deliveryFee}{sale.deliveryFeeRange ? ` (${sale.deliveryFeeRange})` : ''}</span>
+                                    )}
+                                  </p>
+                                )}
                               </>
                             ) : (
                               <span className="text-xs text-gray-400">-</span>
@@ -3866,6 +3986,9 @@ export default function App() {
                           <td className="px-6 py-4">
                             <p className="text-sm font-bold text-gray-700">{sale.productName}</p>
                             <p className="text-[10px] text-pink-400 font-bold uppercase">{sale.brand}</p>
+                            {sale.orderNumber && (
+                              <p className="text-[10px] text-gray-400 font-mono mt-0.5">{sale.orderNumber}</p>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-sm font-semibold">{sale.quantity}</td>
                           <td className="px-6 py-4 text-sm font-bold text-pink-600">KSh {sale.sellingPrice * sale.quantity}</td>
@@ -3876,7 +3999,11 @@ export default function App() {
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            {sale.paymentStatus !== 'Paid' ? (
+                            {sale.orderChannel === 'whatsapp' && sale.negotiationStatus === 'Pending' ? (
+                              <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-amber-100 text-amber-700">
+                                Awaiting Connect
+                              </span>
+                            ) : sale.paymentStatus !== 'Paid' ? (
                               <button
                                 onClick={() => handleClearDebt(sale.id)}
                                 className={`text-[10px] font-bold px-2 py-1 rounded-lg uppercase transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm hover:shadow-md ${getStatusColor(sale.paymentStatus)} bg-white border border-current hover:bg-emerald-50`}
@@ -3889,7 +4016,10 @@ export default function App() {
                                 {sale.paymentStatus}
                               </span>
                             )}
-                            {sale.paymentStatus === 'Deposit' && (
+                            {sale.negotiationStatus === 'Confirmed' && (
+                              <p className="text-[10px] text-emerald-600 mt-1 font-bold">Confirmed</p>
+                            )}
+                            {sale.paymentStatus === 'Deposit' && sale.orderChannel !== 'whatsapp' && (
                               <p className="text-[10px] text-gray-400 mt-1">Paid: KSh {sale.amountPaid}</p>
                             )}
                           </td>
@@ -3906,12 +4036,35 @@ export default function App() {
                             <td className="px-6 py-4 text-sm font-bold text-emerald-500">+KSh {sale.profit}</td>
                           )}
                           <td className="px-6 py-4">
-                            <button
-                              onClick={() => setReceiptSale(sale)}
-                              className="text-xs font-bold text-pink-500 hover:text-pink-600 underline"
-                            >
-                              Receipt
-                            </button>
+                            <div className="flex flex-col gap-1">
+                              {sale.orderChannel === 'whatsapp' && sale.customerPhone && (
+                                <button
+                                  onClick={() =>
+                                    openCustomerWhatsApp(
+                                      sale.customerPhone!,
+                                      `Hi ${sale.customerName || 'there'}, regarding your order ${sale.orderNumber || ''} from ${BRAND.shopName}...`
+                                    )
+                                  }
+                                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                                >
+                                  <WhatsAppIcon size={12} /> Connect
+                                </button>
+                              )}
+                              {role === 'admin' && sale.orderNumber && sale.negotiationStatus === 'Pending' && (
+                                <button
+                                  onClick={() => handleConfirmWhatsAppOrder(sale.orderNumber!)}
+                                  className="text-xs font-bold text-pink-600 hover:text-pink-700 underline"
+                                >
+                                  Confirm order
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setReceiptSale(sale)}
+                                className="text-xs font-bold text-pink-500 hover:text-pink-600 underline text-left"
+                              >
+                                Receipt
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -3948,182 +4101,38 @@ export default function App() {
               </motion.div>
             )}
 
+            {activeTab === 'braids' && (
+              <BraidsPanel
+                products={products}
+                role={role}
+                onRecordSale={(product) => {
+                  setSelectedProductForSale(product);
+                  setAmountPaid(product.sellingPrice);
+                  setSaleQuantity(1);
+                  setPaymentStatus('Paid');
+                  setPaymentMethod(null);
+                  setDiscount(0);
+                }}
+                onAddBraid={role === 'admin' ? () => setActiveTab('inventory') : undefined}
+              />
+            )}
+
             {activeTab === 'inventory' && (
-              <motion.div
-                key="inventory"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <h3 className="font-bold text-gray-800">Inventory Management</h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setIsAddingProduct(true)}
-                      className="flex items-center gap-2 bg-pink-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-pink-600 shadow-md shadow-pink-200 transition-all active:scale-95"
-                    >
-                      <Plus size={18} />
-                      <span>New Product</span>
-                    </button>
-                    <button
-                      onClick={() => setIsAddingOn(true)}
-                      className="flex items-center gap-2 bg-white text-pink-500 border border-pink-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-pink-50 transition-all active:scale-95"
-                    >
-                      <Plus size={18} />
-                      <span>Add On</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Filter size={18} className="text-gray-400" />
-                      <select
-                        value={inventoryCategory}
-                        onChange={(e) => setInventoryCategory(e.target.value as Category)}
-                        className="bg-white border border-pink-100 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 focus:ring-2 focus:ring-pink-300 outline-none"
-                      >
-                        {CATEGORIES.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowLowStockOnly(!showLowStockOnly);
-                        if (!showLowStockOnly) setShowHighStockOnly(false);
-                      }}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${showLowStockOnly
-                          ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                          : 'bg-white text-gray-600 border border-pink-100 hover:bg-pink-50'
-                        }`}
-                    >
-                      <AlertTriangle size={16} className={showLowStockOnly ? 'text-amber-500' : 'text-gray-400'} />
-                      Low Stock Only
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowHighStockOnly(!showHighStockOnly);
-                        if (!showHighStockOnly) setShowLowStockOnly(false);
-                      }}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${showHighStockOnly
-                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                          : 'bg-white text-gray-600 border border-pink-100 hover:bg-pink-50'
-                        }`}
-                    >
-                      <TrendingUp size={16} className={showHighStockOnly ? 'text-blue-500' : 'text-gray-400'} />
-                      High Stock Only
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-3xl shadow-sm border border-pink-100 overflow-hidden">
-                  <table className="w-full text-left">
-                    <thead className="bg-pink-50/50 text-[10px] font-bold uppercase text-gray-400 tracking-wider">
-                      <tr>
-                        <th className="px-6 py-4">Product</th>
-                        <th className="px-6 py-4">Category</th>
-                        <th className="px-6 py-4">Stock</th>
-                        {role === 'admin' && (
-                          <>
-                            <th className="px-6 py-4">Buying Price</th>
-                            <th className="px-6 py-4">Profit</th>
-                          </>
-                        )}
-                        <th className="px-6 py-4">Selling Price</th>
-                        <th className="px-6 py-4">Status</th>
-                        <th className="px-6 py-4">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-pink-50">
-                      {products
-                        .filter(p => (inventoryCategory === 'All' || p.category === inventoryCategory) &&
-                          (!showLowStockOnly || p.stockQuantity <= LOW_STOCK_THRESHOLD) &&
-                          (!showHighStockOnly || p.stockQuantity >= HIGH_STOCK_THRESHOLD))
-                        .sort((a, b) => {
-                          const dateA = a.createdAt.split('T')[0];
-                          const dateB = b.createdAt.split('T')[0];
-                          if (dateA !== dateB) return dateB.localeCompare(dateA);
-                          return a.name.localeCompare(b.name);
-                        })
-                        .map(product => (
-                          <tr key={product.id} className="hover:bg-pink-50/30 transition-colors">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <img src={product.imageUrl} className="w-8 h-8 rounded-lg object-cover" referrerPolicy="no-referrer" />
-                                <div>
-                                  <p className="text-sm font-bold text-gray-700">{product.name}</p>
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-[10px] text-pink-400 font-bold uppercase">{product.brand}</p>
-                                    {product.braidType && (
-                                      <span className="text-[8px] font-bold bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded uppercase">
-                                        {product.braidType} {product.colorNumber && `(${product.colorNumber})`}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-500">{product.category}</td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <span className={`text-sm font-semibold ${product.stockQuantity <= LOW_STOCK_THRESHOLD && product.stockQuantity > 0 ? 'text-amber-600' : product.stockQuantity === 0 ? 'text-red-600' : product.stockQuantity >= HIGH_STOCK_THRESHOLD ? 'text-blue-600' : 'text-gray-700'}`}>
-                                  {product.stockQuantity}
-                                </span>
-                                {product.stockUpdates && product.stockUpdates.length > 0 && product.stockQuantity > 0 && (
-                                  <span className="text-[10px] text-gray-400 whitespace-nowrap mt-0.5" title="Oldest batch date (FIFO)">
-                                    Batch: {new Date(product.stockUpdates[0].date).toLocaleDateString()}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            {role === 'admin' && (
-                              <>
-                                <td className="px-6 py-4 text-sm font-bold text-gray-600">KSh {product.lastPrice}</td>
-                                <td className="px-6 py-4 text-sm font-bold text-emerald-600">KSh {product.sellingPrice - product.lastPrice}</td>
-                              </>
-                            )}
-                            <td className="px-6 py-4 text-sm font-bold text-pink-600">KSh {product.sellingPrice}</td>
-                            <td className="px-6 py-4">
-                              {product.stockQuantity === 0 ? (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-red-100 text-red-600 flex items-center gap-1 w-max">
-                                  <AlertTriangle size={12} /> Out of Stock
-                                </span>
-                              ) : product.stockQuantity <= LOW_STOCK_THRESHOLD ? (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-amber-100 text-amber-600 flex items-center gap-1 w-max">
-                                  <AlertTriangle size={12} /> Low Stock
-                                </span>
-                              ) : product.stockQuantity >= HIGH_STOCK_THRESHOLD ? (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-blue-100 text-blue-600 flex items-center gap-1 w-max">
-                                  <TrendingUp size={12} /> High Stock
-                                </span>
-                              ) : (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-emerald-100 text-emerald-600">In Stock</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4">
-                              <button
-                                disabled={product.stockQuantity === 0}
-                                onClick={() => {
-                                  setSelectedProductForSale(product);
-                                  setAmountPaid(product.sellingPrice);
-                                  setSaleQuantity(1);
-                                  setPaymentStatus('Paid');
-                                  setPaymentMethod(null);
-                                  setDiscount(0);
-                                }}
-                                className="p-2 bg-pink-50 text-pink-500 rounded-xl hover:bg-pink-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <ShoppingCart size={18} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </motion.div>
+              <InventoryPanel
+                products={products}
+                setProducts={setProducts}
+                role={role}
+                activeEmployee={activeEmployee}
+                onRecordSale={(product) => {
+                  setSelectedProductForSale(product);
+                  setAmountPaid(product.sellingPrice);
+                  setSaleQuantity(1);
+                  setPaymentStatus('Paid');
+                  setPaymentMethod(null);
+                  setDiscount(0);
+                }}
+                showNotification={showNotification}
+              />
             )}
 
             {activeTab === 'required-products' && (
@@ -4202,6 +4211,99 @@ export default function App() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'home-promos' && role === 'admin' && (
+              <motion.div
+                key="home-promos"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+              >
+                <HomePromoPanel
+                  config={homePromoConfig}
+                  products={products}
+                  onSave={async (cfg) => {
+                    try {
+                      const token = getStaffSessionToken();
+                      const saved = await persistHomePromoConfig(cfg, token);
+                      setHomePromoConfig(saved);
+                    } catch (e) {
+                      showNotification(e instanceof Error ? e.message : 'Failed to save promos', 'error');
+                    }
+                  }}
+                  showNotification={showNotification}
+                />
+              </motion.div>
+            )}
+
+            {activeTab === 'members' && role === 'admin' && (
+              <motion.div
+                key="members"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-pink-100">
+                  <h3 className="font-bold text-gray-800 mb-2">Web Members</h3>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Customers who placed orders via Connect checkout are saved automatically with their name and phone.
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-pink-50/50 text-[10px] font-bold uppercase text-gray-400 tracking-wider">
+                        <tr>
+                          <th className="px-6 py-4">Name</th>
+                          <th className="px-6 py-4">Phone</th>
+                          <th className="px-6 py-4">Location</th>
+                          <th className="px-6 py-4">Orders</th>
+                          <th className="px-6 py-4">Last Order</th>
+                          <th className="px-6 py-4">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-pink-50">
+                        {(adminMembers.length ? adminMembers : getAllMembers())
+                          .sort((a, b) => b.lastOrderAt.localeCompare(a.lastOrderAt))
+                          .map((member) => (
+                            <tr key={member.id} className="hover:bg-pink-50/30 transition-colors">
+                              <td className="px-6 py-4 text-sm font-bold text-gray-700">{member.name}</td>
+                              <td className="px-6 py-4 text-sm text-gray-500">{member.phone}</td>
+                              <td className="px-6 py-4 text-sm text-gray-500">{member.location || '—'}</td>
+                              <td className="px-6 py-4 text-sm font-semibold">{member.orderCount}</td>
+                              <td className="px-6 py-4 text-xs text-gray-400">
+                                {new Date(member.lastOrderAt).toLocaleDateString()}
+                                {member.lastOrderNumber && (
+                                  <p className="text-[10px] font-mono mt-0.5">{member.lastOrderNumber}</p>
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                                <button
+                                  onClick={() =>
+                                    openCustomerWhatsApp(
+                                      member.phone,
+                                      `Hi ${member.name.split(' ')[0]}, welcome back to ${BRAND.systemName}!`
+                                    )
+                                  }
+                                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                                >
+                                  <WhatsAppIcon size={12} /> Connect
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        {(adminMembers.length ? adminMembers : getAllMembers()).length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">
+                              No members yet — they appear after the first Connect checkout.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -4287,9 +4389,9 @@ export default function App() {
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all"
-                                          title="WhatsApp"
+                                          title="Connect"
                                         >
-                                          <MessageCircle size={16} />
+                                          <WhatsAppIcon size={16} />
                                         </a>
                                       )}
                                       <button
@@ -4478,22 +4580,28 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Discount Amount (KSh)</label>
-                    <input
-                      type="number"
-                      value={discount}
-                      onChange={(e) => {
-                        const newDiscount = Number(e.target.value);
-                        setDiscount(newDiscount);
-                        if (paymentStatus === 'Paid') {
-                          setAmountPaid((selectedProductForSale.sellingPrice * saleQuantity) - newDiscount);
-                        }
-                      }}
-                      min="0"
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
+                  {role === 'admin' ? (
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Discount Amount (KSh) — admin only</label>
+                      <input
+                        type="number"
+                        value={discount}
+                        onChange={(e) => {
+                          const newDiscount = calcPosAdminDiscount(Number(e.target.value), selectedProductForSale);
+                          setDiscount(newDiscount);
+                          if (paymentStatus === 'Paid') {
+                            setAmountPaid((selectedProductForSale.sellingPrice * saleQuantity) - newDiscount);
+                          }
+                        }}
+                        min="0"
+                        className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-gray-50 rounded-xl text-xs text-gray-500">
+                      No manual discounts for staff. System bundle (KSh 20 off 3+ items) applies on the online shop only — braids excluded.
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -4580,329 +4688,6 @@ export default function App() {
                       )}
                     </button>
                   </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* New Product Modal */}
-      <AnimatePresence>
-        {isAddingProduct && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsAddingProduct(false)}
-              className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden border border-pink-100 max-h-[95vh] flex flex-col"
-            >
-              <div className="p-6 overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-black text-gray-800">Add New Product</h3>
-                  <button onClick={() => setIsAddingProduct(false)} className="p-2 hover:bg-pink-50 rounded-full text-gray-400">
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Product Name</label>
-                    <input
-                      type="text"
-                      value={newProductData.name}
-                      onChange={(e) => setNewProductData({ ...newProductData, name: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Brand</label>
-                    <input
-                      type="text"
-                      value={newProductData.brand}
-                      onChange={(e) => setNewProductData({ ...newProductData, brand: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Quantity</label>
-                      <input
-                        type="number"
-                        value={newProductData.quantity}
-                        onChange={(e) => setNewProductData({ ...newProductData, quantity: parseInt(e.target.value) })}
-                        className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Buying Price</label>
-                      <input
-                        type="number"
-                        value={newProductData.buyingPrice}
-                        onChange={(e) => setNewProductData({ ...newProductData, buyingPrice: parseFloat(e.target.value) })}
-                        className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Selling Price</label>
-                    <input
-                      type="number"
-                      value={newProductData.sellingPrice}
-                      onChange={(e) => setNewProductData({ ...newProductData, sellingPrice: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Category</label>
-                    <select
-                      value={newProductData.category}
-                      onChange={(e) => setNewProductData({ ...newProductData, category: e.target.value as Category })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    >
-                      {CATEGORIES.filter(c => c !== 'All').map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {newProductData.category === 'Braids' && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Braid Type</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., Jibambe, Havana Curl"
-                          value={newProductData.braidType}
-                          onChange={(e) => setNewProductData({ ...newProductData, braidType: e.target.value })}
-                          className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Color Number</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., 1, 33, 1/33"
-                          value={newProductData.colorNumber}
-                          onChange={(e) => setNewProductData({ ...newProductData, colorNumber: e.target.value })}
-                          className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Best Used By (Solution)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Dry skin, Dandruff"
-                      value={newProductData.bestUsedBy}
-                      onChange={(e) => setNewProductData({ ...newProductData, bestUsedBy: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Best Used When</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., At night, In the morning"
-                      value={newProductData.bestUsedWhen}
-                      onChange={(e) => setNewProductData({ ...newProductData, bestUsedWhen: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Best Used With</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Vitamin C Serum"
-                      value={newProductData.bestUsedWith}
-                      onChange={(e) => setNewProductData({ ...newProductData, bestUsedWith: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Results After</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., 2 weeks, 1 month"
-                      value={newProductData.resultsAfter}
-                      onChange={(e) => setNewProductData({ ...newProductData, resultsAfter: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Product Photo</label>
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setNewProductData({ ...newProductData, imageUrl: reader.result as string });
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                      className="w-full h-24 bg-pink-50 border-2 border-dashed border-pink-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-pink-100 transition-all overflow-hidden relative"
-                    >
-                      {newProductData.imageUrl ? (
-                        <>
-                          <img src={newProductData.imageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                            <Upload className="text-white" size={20} />
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <ImageIcon className="text-pink-300 mb-1" size={24} />
-                          <p className="text-[10px] text-pink-400 font-bold uppercase">Drop or Click to Upload</p>
-                        </>
-                      )}
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleImageUpload}
-                        accept="image/*"
-                        className="hidden"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const newProduct: Product = {
-                        id: Math.random().toString(36).substr(2, 9),
-                        name: newProductData.name,
-                        brand: newProductData.brand,
-                        category: newProductData.category,
-                        sellerId: 's1',
-                        firstPrice: newProductData.buyingPrice,
-                        lastPrice: newProductData.buyingPrice,
-                        sellingPrice: newProductData.sellingPrice,
-                        stockQuantity: newProductData.quantity,
-                        isFixedPrice: true,
-                        imageUrl: newProductData.imageUrl || `https://picsum.photos/seed/${newProductData.name}/200/200`,
-                        createdAt: new Date().toISOString(),
-                        bestUsedBy: newProductData.bestUsedBy,
-                        bestUsedWhen: newProductData.bestUsedWhen,
-                        bestUsedWith: newProductData.bestUsedWith,
-                        resultsAfter: newProductData.resultsAfter,
-                        braidType: newProductData.category === 'Braids' ? newProductData.braidType : undefined,
-                        colorNumber: newProductData.category === 'Braids' ? newProductData.colorNumber : undefined,
-                        stockUpdates: [{ date: new Date().toISOString(), quantity: newProductData.quantity, addedBy: role === 'admin' ? 'Admin' : (activeEmployee || 'Staff') }]
-                      };
-                      setProducts([...products, newProduct]);
-                      setIsAddingProduct(false);
-                      setNewProductData({
-                        name: '', brand: '', category: 'Other', quantity: 0, buyingPrice: 0, sellingPrice: 0, imageUrl: '',
-                        bestUsedBy: '', bestUsedWhen: '', bestUsedWith: '', resultsAfter: '', braidType: '', colorNumber: ''
-                      });
-                    }}
-                    className="w-full bg-pink-500 text-white py-3 rounded-xl font-bold shadow-xl shadow-pink-100 active:scale-95 transition-all mt-2"
-                  >
-                    Save Product
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Add On Modal */}
-      <AnimatePresence>
-        {isAddingOn && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsAddingOn(false)}
-              className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden border border-pink-100 max-h-[95vh] flex flex-col"
-            >
-              <div className="p-6 overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-black text-gray-800">Add On Stock</h3>
-                  <button onClick={() => setIsAddingOn(false)} className="p-2 hover:bg-pink-50 rounded-full text-gray-400">
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Search & Select Product</label>
-                    <div className="relative mb-2">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                      <input
-                        type="text"
-                        placeholder="Type to filter..."
-                        className="w-full pl-9 pr-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                        onChange={(e) => setAddOnSearchQuery(e.target.value)}
-                      />
-                    </div>
-                    <select
-                      value={addOnData.productId}
-                      onChange={(e) => setAddOnData({ ...addOnData, productId: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    >
-                      <option value="">Select a product...</option>
-                      {[...products]
-                        .filter(p => p.name.toLowerCase().includes(addOnSearchQuery.toLowerCase()) || p.brand.toLowerCase().includes(addOnSearchQuery.toLowerCase()))
-                        .sort((a, b) => {
-                          const dateA = a.createdAt.split('T')[0];
-                          const dateB = b.createdAt.split('T')[0];
-                          if (dateA !== dateB) return dateB.localeCompare(dateA);
-                          return a.name.localeCompare(b.name);
-                        })
-                        .map(p => (
-                          <option key={p.id} value={p.id}>{p.name} ({p.brand})</option>
-                        ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Quantity Added</label>
-                    <input
-                      type="number"
-                      value={addOnData.quantity}
-                      onChange={(e) => setAddOnData({ ...addOnData, quantity: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div className="p-3 bg-pink-50 rounded-xl text-[10px] text-pink-400 font-bold uppercase">
-                    Date: {new Date().toLocaleDateString()}
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (!addOnData.productId) return;
-                      setProducts(products.map(p => p.id === addOnData.productId ? {
-                        ...p,
-                        stockQuantity: p.stockQuantity + addOnData.quantity,
-                        stockUpdates: [...(p.stockUpdates || []), { date: new Date().toISOString(), quantity: addOnData.quantity, addedBy: role === 'admin' ? 'Admin' : (activeEmployee || 'Staff') }]
-                      } : p));
-                      setIsAddingOn(false);
-                      setAddOnData({ productId: '', quantity: 0 });
-                    }}
-                    className="w-full bg-pink-500 text-white py-3 rounded-xl font-bold shadow-xl shadow-pink-100 active:scale-95 transition-all mt-2"
-                  >
-                    Update Stock
-                  </button>
                 </div>
               </div>
             </motion.div>
@@ -5041,7 +4826,7 @@ export default function App() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">WhatsApp Number</label>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Connect Number</label>
                       <input
                         type="text"
                         value={sellerFormData.whatsappNumber}
