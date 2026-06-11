@@ -62,7 +62,7 @@ export default function GlowTipPopup({ tip, theme = 'default' }: GlowTipPopupPro
 
             <div className="text-center mb-2">
               <span className="text-2xl">{tip.emoji ?? accentEmoji}</span>
-              <p className="glow-popup-title text-amber-200/90 text-sm tracking-wide mt-1">
+              <p className="glow-popup-title glow-popup-subtitle text-sm tracking-wide mt-1">
                 Glow · Reminder
               </p>
             </div>

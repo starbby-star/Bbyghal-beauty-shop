@@ -498,7 +498,7 @@ export default function Storefront({
                               onClick={() => setServiceType(opt.id)}
                               className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all ${
                                 serviceType === opt.id
-                                  ? 'bg-black text-white border-black'
+                                  ? 'sf-chip--active'
                                   : 'bg-white text-gray-600 border-gray-200 hover:border-pink-300'
                               }`}
                             >
@@ -507,7 +507,7 @@ export default function Storefront({
                           ))}
                         </div>
                         {serviceType === 'payment_delivery' && (
-                          <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-900 leading-relaxed">
+                          <div className="sf-delivery-box mt-3 p-3 border rounded-xl text-xs leading-relaxed">
                             {county && deliveryEstimate ? (
                               <>
                                 <p className="font-bold mb-1">
@@ -519,7 +519,7 @@ export default function Storefront({
                                     ? ' (around Nairobi: KSh 150–200 by exact area)'
                                     : ' (KSh 200–500 by county & distance)'}
                                 </p>
-                                <p className="text-amber-700 italic">{deliveryEstimate.note}</p>
+                                <p className="opacity-80 italic">{deliveryEstimate.note}</p>
                               </>
                             ) : (
                               <p>Select your county to see the delivery estimate. Fees from KSh 150 (Nairobi area) to KSh 500 (far counties) — negotiable on Connect.</p>
@@ -537,7 +537,7 @@ export default function Storefront({
                               onClick={() => setCheckoutPaymentMethod(method)}
                               className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${
                                 checkoutPaymentMethod === method
-                                  ? 'bg-pink-500 text-white border-pink-500'
+                                  ? 'sf-chip--active'
                                   : 'bg-white text-gray-600 border-gray-200'
                               }`}
                             >
@@ -556,7 +556,7 @@ export default function Storefront({
                   {promoSavings > 0 && <p className="text-sm text-pink-600 mb-1">Promo savings: -KSh {promoSavings}</p>}
                   {cartDiscount > 0 && <p className="text-sm text-emerald-600 mb-1">Bundle discount: -KSh {cartDiscount}</p>}
                   {serviceType === 'payment_delivery' && deliveryEstimate && (
-                    <div className="flex justify-between text-sm text-amber-700 mb-1">
+                    <div className="flex justify-between text-sm sf-brand-label mb-1">
                       <span>Delivery est. ({deliveryEstimate.rangeLabel})</span>
                       <span className="font-bold">+KSh {deliveryFee}</span>
                     </div>

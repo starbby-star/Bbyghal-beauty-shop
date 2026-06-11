@@ -6,6 +6,7 @@
   --font-display: "Playfair Display", serif;
   --font-sans: "DM Sans", system-ui, sans-serif;
   --color-blumera-pink: #ff1493;
+  --color-blumera-gold: #d4a017;
   --color-blumera-black: #0a0a0a;
 }
 
@@ -21,88 +22,178 @@ html {
   display: none;
 }
 
-/* ─── Storefront base ─── */
+/* ─── Default theme: gold + pink + black + white ─── */
 .storefront-gradient {
   background: #ffffff;
   --sf-accent: #ff1493;
-  --sf-accent-2: #0a0a0a;
-  --sf-accent-soft: #fdf2f8;
+  --sf-accent-2: #d4a017;
+  --sf-accent-soft: #fffbeb;
   --sf-accent-muted: #fce7f3;
   --sf-text-accent: #db2777;
-  --sf-header-bg: rgba(10, 10, 10, 0.95);
-  --sf-header-border: rgba(255, 255, 255, 0.1);
-  --sf-nav-active: #ec4899;
-  --sf-btn-primary: #0a0a0a;
-  --sf-btn-primary-hover: #ec4899;
-  --sf-connect-bg: #0a0a0a;
-  --sf-connect-hover: #ec4899;
-  --sf-cart-bg: #ec4899;
+  --sf-header-bg: #0a0a0a;
+  --sf-header-border: rgba(212, 160, 23, 0.35);
+  --sf-nav-active: linear-gradient(135deg, #d4a017, #ff1493);
+  --sf-btn-primary: linear-gradient(135deg, #d4a017, #e8b923);
+  --sf-btn-primary-hover: linear-gradient(135deg, #ff1493, #d4a017);
+  --sf-connect-bg: linear-gradient(135deg, #0a0a0a, #3d2a0a);
+  --sf-connect-hover: linear-gradient(135deg, #d4a017, #ff1493);
+  --sf-cart-bg: linear-gradient(135deg, #ff1493, #d4a017);
   --sf-page-bg: #ffffff;
   --sf-bar-bg: #ffffff;
   --sf-footer-bg: #ffffff;
-  --sf-ring: #f9a8d4;
+  --sf-ring: #d4a017;
+  --sf-on-accent: #0a0a0a;
+  --sf-banner-bg: linear-gradient(90deg, #0a0a0a, #ff1493 45%, #d4a017);
+  --sf-trust-strip-bg: #0a0a0a;
+  --sf-trust-icon-bg: rgba(255, 20, 147, 0.2);
+  --sf-trust-icon-color: #f5d061;
+  --sf-chip-active-bg: #0a0a0a;
+  --sf-chip-active-text: #ffffff;
+  --sf-chip-active-border: #0a0a0a;
+  --sf-delivery-bg: #fffbeb;
+  --sf-delivery-border: #fde68a;
+  --sf-delivery-text: #78350f;
 }
 
 .blumera-pink-glow {
-  box-shadow: 0 0 40px rgba(255, 20, 147, 0.25);
+  box-shadow: 0 0 40px rgba(255, 20, 147, 0.25), 0 0 16px rgba(212, 160, 23, 0.15);
 }
 
-/* ─── Pink Thursday theme (pink + gold + black + white) ─── */
+/* ─── Pink Thursday: pink + white only ─── */
 .theme-pink-thursday.storefront-gradient {
-  background: linear-gradient(180deg, #1a0a14 0%, #fff5f9 6%, #fffef8 20%, #ffffff 100%);
+  background: linear-gradient(180deg, #fff5f9 0%, #ffffff 12%, #ffffff 100%);
   --sf-accent: #ff1493;
-  --sf-accent-2: #d4a017;
+  --sf-accent-2: #ff69b4;
   --sf-accent-soft: #fff0f7;
-  --sf-accent-muted: #fde8f3;
-  --sf-text-accent: #c2185b;
-  --sf-header-bg: linear-gradient(135deg, #0a0a0a 0%, #4a0e2e 45%, #3d2a0a 100%);
-  --sf-header-border: rgba(212, 160, 23, 0.35);
-  --sf-nav-active: linear-gradient(135deg, #ff1493, #d4a017);
-  --sf-btn-primary: linear-gradient(135deg, #d4a017, #ff69b4);
-  --sf-btn-primary-hover: linear-gradient(135deg, #ff1493, #d4a017);
-  --sf-connect-bg: linear-gradient(135deg, #d4a017, #ff1493);
-  --sf-connect-hover: linear-gradient(135deg, #ff1493, #f5d061);
-  --sf-cart-bg: linear-gradient(135deg, #ff1493, #d4a017);
+  --sf-accent-muted: #fce7f3;
+  --sf-text-accent: #db2777;
+  --sf-header-bg: linear-gradient(135deg, #ff1493 0%, #ff69b4 55%, #ff85c8 100%);
+  --sf-header-border: rgba(255, 255, 255, 0.35);
+  --sf-nav-active: #ffffff;
+  --sf-btn-primary: #ffffff;
+  --sf-btn-primary-hover: #fff0f7;
+  --sf-connect-bg: #ffffff;
+  --sf-connect-hover: #fff0f7;
+  --sf-cart-bg: #ffffff;
   --sf-page-bg: transparent;
   --sf-bar-bg: rgba(255, 240, 247, 0.95);
-  --sf-footer-bg: linear-gradient(180deg, #fff8fc, #fffef5);
-  --sf-ring: #d4a017;
+  --sf-footer-bg: linear-gradient(180deg, #fff8fc, #ffffff);
+  --sf-ring: #ff69b4;
+  --sf-on-accent: #ff1493;
+  --sf-banner-bg: linear-gradient(90deg, #ff1493, #ff69b4, #ffb6d9);
+  --sf-trust-strip-bg: linear-gradient(90deg, #ff1493, #ff69b4);
+  --sf-trust-icon-bg: rgba(255, 255, 255, 0.25);
+  --sf-trust-icon-color: #ffffff;
+  --sf-chip-active-bg: #ff1493;
+  --sf-chip-active-text: #ffffff;
+  --sf-chip-active-border: #ff1493;
+  --sf-delivery-bg: #fff0f7;
+  --sf-delivery-border: #fbcfe8;
+  --sf-delivery-text: #be185d;
 }
 
 .theme-pink-thursday .blumera-pink-glow {
-  box-shadow: 0 0 40px rgba(255, 20, 147, 0.35), 0 0 20px rgba(212, 160, 23, 0.25);
+  box-shadow: 0 0 40px rgba(255, 20, 147, 0.35);
 }
 
 .theme-pink-thursday .sf-day-ribbon {
-  background: linear-gradient(90deg, #ff1493, #d4a017, #ff1493);
+  background: linear-gradient(90deg, #ff1493, #ff85c8, #ff1493);
   color: #fff;
 }
 
-/* ─── Sell-out day theme (gold + white + pink) ─── */
+.theme-pink-thursday .sf-nav-btn--active {
+  color: #ff1493;
+  font-weight: 700;
+}
+
+.theme-pink-thursday .sf-cart-btn,
+.theme-pink-thursday .sf-connect-btn,
+.theme-pink-thursday .sf-btn-primary,
+.theme-pink-thursday .sf-cat-btn--active,
+.theme-pink-thursday .sf-checkout-btn {
+  color: #ff1493 !important;
+  font-weight: 700;
+}
+
+.theme-pink-thursday .sf-connect-btn:hover,
+.theme-pink-thursday .sf-btn-primary:hover {
+  color: #db2777 !important;
+}
+
+.theme-pink-thursday .sf-cart-badge {
+  background: #ff1493;
+  color: #fff;
+}
+
+/* ─── Sell-out day: black + gold + pink accents ─── */
 .theme-sellout-day.storefront-gradient {
-  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 15%, #fff8f5 100%);
-  --sf-accent: #d97706;
-  --sf-accent-2: #f472b6;
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 15%, #fafafa 100%);
+  --sf-accent: #ff1493;
+  --sf-accent-2: #d4a017;
   --sf-accent-soft: #fffbeb;
   --sf-accent-muted: #fef3c7;
-  --sf-text-accent: #b45309;
-  --sf-header-bg: linear-gradient(135deg, #78350f 0%, #0a0a0a 50%, #831843 100%);
-  --sf-header-border: rgba(251, 191, 36, 0.4);
-  --sf-nav-active: linear-gradient(135deg, #f59e0b, #f472b6);
-  --sf-btn-primary: linear-gradient(135deg, #d97706, #fbbf24);
-  --sf-btn-primary-hover: linear-gradient(135deg, #f59e0b, #ec4899);
-  --sf-connect-bg: linear-gradient(135deg, #d97706, #ec4899);
-  --sf-connect-hover: linear-gradient(135deg, #fbbf24, #f472b6);
-  --sf-cart-bg: linear-gradient(135deg, #f59e0b, #ec4899);
+  --sf-text-accent: #ff1493;
+  --sf-header-bg: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 70%, #2a1a0a 100%);
+  --sf-header-border: rgba(212, 160, 23, 0.45);
+  --sf-nav-active: linear-gradient(135deg, #d4a017, #f5d061);
+  --sf-btn-primary: linear-gradient(135deg, #d4a017, #f5d061);
+  --sf-btn-primary-hover: linear-gradient(135deg, #f5d061, #ff1493);
+  --sf-connect-bg: linear-gradient(135deg, #d4a017, #b8860b);
+  --sf-connect-hover: linear-gradient(135deg, #f5d061, #ff1493);
+  --sf-cart-bg: linear-gradient(135deg, #d4a017, #f5d061);
   --sf-page-bg: transparent;
   --sf-bar-bg: rgba(255, 251, 235, 0.95);
-  --sf-footer-bg: #fffbeb;
-  --sf-ring: #fbbf24;
+  --sf-footer-bg: #0a0a0a;
+  --sf-ring: #d4a017;
+  --sf-on-accent: #0a0a0a;
+  --sf-banner-bg: linear-gradient(90deg, #0a0a0a, #d4a017 50%, #ff1493);
+  --sf-trust-strip-bg: #0a0a0a;
+  --sf-trust-icon-bg: rgba(212, 160, 23, 0.2);
+  --sf-trust-icon-color: #f5d061;
+  --sf-chip-active-bg: #d4a017;
+  --sf-chip-active-text: #0a0a0a;
+  --sf-chip-active-border: #d4a017;
+  --sf-delivery-bg: #fffbeb;
+  --sf-delivery-border: #fde68a;
+  --sf-delivery-text: #78350f;
 }
 
 .theme-sellout-day .sf-day-ribbon {
-  background: linear-gradient(90deg, #d97706, #fbbf24, #ec4899);
+  background: linear-gradient(90deg, #0a0a0a, #d4a017, #ff1493);
   color: #fff;
+}
+
+.theme-sellout-day .sf-nav-btn--active,
+.theme-sellout-day .sf-cart-btn,
+.theme-sellout-day .sf-connect-btn,
+.theme-sellout-day .sf-btn-primary,
+.theme-sellout-day .sf-cat-btn--active,
+.theme-sellout-day .sf-checkout-btn {
+  color: #0a0a0a;
+  font-weight: 700;
+}
+
+.theme-sellout-day .sf-connect-btn {
+  color: #0a0a0a !important;
+}
+
+.theme-sellout-day .sf-footer {
+  color: #f5f5f5;
+  border-color: rgba(212, 160, 23, 0.25);
+}
+
+.theme-sellout-day .sf-footer .text-gray-500,
+.theme-sellout-day .sf-footer .text-gray-400 {
+  color: #a3a3a3;
+}
+
+.theme-sellout-day .sf-tagline {
+  color: #f5d061;
+}
+
+.theme-sellout-day .sf-brand-label,
+.theme-sellout-day .sf-price-now {
+  color: #ff1493;
 }
 
 /* ─── Themed components ─── */
@@ -112,7 +203,11 @@ html {
 }
 
 .sf-tagline {
-  color: var(--sf-accent);
+  color: var(--sf-accent-2);
+}
+
+.theme-default .sf-tagline {
+  color: #f5d061;
 }
 
 .sf-nav-btn--active {
@@ -120,8 +215,7 @@ html {
   color: #fff;
 }
 
-.theme-pink-thursday .sf-nav-btn--active,
-.theme-sellout-day .sf-nav-btn--active {
+.theme-default .sf-nav-btn--active {
   color: #0a0a0a;
   font-weight: 700;
 }
@@ -139,8 +233,7 @@ html {
   color: #fff;
 }
 
-.theme-pink-thursday .sf-cart-btn,
-.theme-sellout-day .sf-cart-btn {
+.theme-default .sf-cart-btn {
   color: #0a0a0a;
   font-weight: 700;
 }
@@ -148,6 +241,11 @@ html {
 .sf-cart-badge {
   background: #fff;
   color: var(--sf-accent);
+}
+
+.theme-default .sf-cart-badge {
+  background: #0a0a0a;
+  color: #f5d061;
 }
 
 .sf-connect-btn {
@@ -159,9 +257,8 @@ html {
   transform: scale(1.02);
 }
 
-.theme-pink-thursday .sf-connect-btn,
-.theme-sellout-day .sf-connect-btn {
-  color: #0a0a0a !important;
+.theme-default .sf-connect-btn {
+  color: #f5d061 !important;
 }
 
 .sf-btn-primary {
@@ -172,8 +269,7 @@ html {
   background: var(--sf-btn-primary-hover);
 }
 
-.theme-pink-thursday .sf-btn-primary,
-.theme-sellout-day .sf-btn-primary {
+.theme-default .sf-btn-primary {
   color: #0a0a0a;
   font-weight: 700;
 }
@@ -184,8 +280,7 @@ html {
   border-color: transparent;
 }
 
-.theme-pink-thursday .sf-cat-btn--active,
-.theme-sellout-day .sf-cat-btn--active {
+.theme-default .sf-cat-btn--active {
   color: #0a0a0a;
 }
 
@@ -233,8 +328,7 @@ html {
   opacity: 0.92;
 }
 
-.theme-pink-thursday .sf-checkout-btn,
-.theme-sellout-day .sf-checkout-btn {
+.theme-default .sf-checkout-btn {
   color: #0a0a0a;
   font-weight: 700;
 }
@@ -252,6 +346,79 @@ html {
   color: var(--sf-accent);
 }
 
+.sf-offer-banner {
+  background: var(--sf-banner-bg);
+}
+
+.sf-trust-strip {
+  background: var(--sf-trust-strip-bg);
+}
+
+.sf-trust-icon {
+  background: var(--sf-trust-icon-bg);
+  color: var(--sf-trust-icon-color);
+}
+
+.sf-chip--active {
+  background: var(--sf-chip-active-bg);
+  color: var(--sf-chip-active-text);
+  border-color: var(--sf-chip-active-border);
+}
+
+.sf-delivery-box {
+  background: var(--sf-delivery-bg);
+  border-color: var(--sf-delivery-border);
+  color: var(--sf-delivery-text);
+}
+
+.sf-hero-cta {
+  background: var(--sf-btn-primary);
+  color: var(--sf-on-accent);
+}
+
+.sf-hero-cta:hover {
+  background: var(--sf-btn-primary-hover);
+  opacity: 0.95;
+}
+
+.theme-default .sf-hero-cta {
+  background: linear-gradient(135deg, #ff1493, #d4a017);
+  color: #fff;
+}
+
+.theme-sellout-day .sf-hero-cta {
+  background: linear-gradient(135deg, #d4a017, #f5d061);
+  color: #0a0a0a;
+}
+
+.theme-pink-thursday .sf-hero-cta {
+  background: #ffffff;
+  color: #ff1493;
+  box-shadow: 0 4px 20px rgba(255, 20, 147, 0.35);
+}
+
+.sf-pink-thursday-section {
+  background: linear-gradient(135deg, #ff1493 0%, #ff69b4 50%, #ffb6d9 100%);
+}
+
+.sf-pink-thursday-card {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.sf-pink-thursday-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.sf-sellout-section {
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+}
+
+.theme-sellout-day .sf-sellout-section {
+  background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 8%, #fffbeb 8%, #ffffff 100%);
+}
+
 /* Glow popup — top centre, distinct typography */
 .glow-popup-card {
   font-family: var(--font-sans);
@@ -266,21 +433,35 @@ html {
   line-height: 1.45;
 }
 
+.glow-popup-subtitle {
+  color: rgba(255, 255, 255, 0.85);
+}
+
 .theme-pink-thursday .glow-popup-card {
-  background: linear-gradient(145deg, #1a0a14 0%, #4a0e2e 40%, #3d2a0a 100%);
-  border: 1px solid rgba(212, 160, 23, 0.5);
-  box-shadow: 0 8px 32px rgba(255, 20, 147, 0.3), 0 0 0 1px rgba(212, 160, 23, 0.2);
+  background: linear-gradient(145deg, #ff1493 0%, #ff69b4 55%, #ffb6d9 100%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 8px 32px rgba(255, 20, 147, 0.35);
 }
 
 .theme-sellout-day .glow-popup-card {
-  background: linear-gradient(145deg, #78350f 0%, #1a1a1a 50%, #831843 100%);
-  border: 1px solid rgba(251, 191, 36, 0.45);
+  background: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 45%, #3d2a0a 100%);
+  border: 1px solid rgba(212, 160, 23, 0.5);
+  box-shadow: 0 8px 32px rgba(212, 160, 23, 0.2);
+}
+
+.theme-sellout-day .glow-popup-subtitle {
+  color: #f5d061;
 }
 
 .theme-default .glow-popup-card,
 .glow-popup-card {
-  background: linear-gradient(145deg, #831843 0%, #0a0a0a 100%);
-  border: 1px solid rgba(255, 20, 147, 0.35);
+  background: linear-gradient(145deg, #0a0a0a 0%, #3d2a0a 45%, #831843 100%);
+  border: 1px solid rgba(212, 160, 23, 0.4);
+  box-shadow: 0 8px 32px rgba(255, 20, 147, 0.2);
+}
+
+.theme-default .glow-popup-subtitle {
+  color: #f5d061;
 }
 
 /* Admin panel */

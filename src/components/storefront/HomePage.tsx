@@ -87,18 +87,20 @@ export default function HomePage({
             className="max-w-2xl"
           >
             {theme === 'pink-thursday' && (
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-amber-400 text-black rounded-full px-4 py-1.5 text-xs font-black mb-4 animate-pulse">
+              <div className="inline-flex items-center gap-2 bg-white text-pink-600 rounded-full px-4 py-1.5 text-xs font-black mb-4 animate-pulse shadow-lg shadow-pink-500/30">
                 ✨ PINK THURSDAY LIVE {pinkThursdayTimeLeft(homePromoConfig) && `· ${pinkThursdayTimeLeft(homePromoConfig)}`}
               </div>
             )}
             {theme === 'sellout-day' && (
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-400 to-white text-black rounded-full px-4 py-1.5 text-xs font-black mb-4">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[#d4a017] to-white text-black rounded-full px-4 py-1.5 text-xs font-black mb-4">
                 🔥 SELLOUT DAY {selloutTimeLeft(homePromoConfig) && `· ${selloutTimeLeft(homePromoConfig)}`}
               </div>
             )}
             <div className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-5 ${
               theme === 'pink-thursday'
-                ? 'bg-amber-500/20 border border-amber-400/40 text-amber-200'
+                ? 'bg-white/20 border border-white/40 text-white'
+                : theme === 'sellout-day'
+                ? 'bg-[#d4a017]/20 border border-[#d4a017]/40 text-[#f5d061]'
                 : 'bg-pink-500/20 border border-pink-500/40 text-pink-300'
             }`}>
               <Sparkles size={14} /> {BRAND.tagline}
@@ -106,11 +108,17 @@ export default function HomePage({
 
             <h2 className="text-4xl sm:text-6xl font-display font-bold mb-4 leading-tight">
               {theme === 'pink-thursday' ? (
-                <span className="bg-gradient-to-r from-pink-400 via-pink-300 to-amber-300 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-white via-pink-100 to-pink-200 bg-clip-text text-transparent">
+                  {BRAND.systemName}
+                </span>
+              ) : theme === 'sellout-day' ? (
+                <span className="bg-gradient-to-r from-[#f5d061] via-white to-pink-300 bg-clip-text text-transparent">
                   {BRAND.systemName}
                 </span>
               ) : (
-                BRAND.systemName
+                <span className="bg-gradient-to-r from-pink-400 via-[#f5d061] to-white bg-clip-text text-transparent">
+                  {BRAND.systemName}
+                </span>
               )}
             </h2>
             <p className="text-lg text-gray-300 mb-2">{BRAND.shopName}</p>
@@ -121,7 +129,7 @@ export default function HomePage({
             <div className="flex flex-wrap gap-3 mb-10">
               <button
                 onClick={() => onNavigate('shop')}
-                className="inline-flex items-center gap-2 bg-pink-500 text-white px-7 py-3.5 rounded-full font-bold hover:bg-pink-400 shadow-lg shadow-pink-500/30 transition-all"
+                className="sf-hero-cta inline-flex items-center gap-2 px-7 py-3.5 rounded-full font-bold shadow-lg transition-all"
               >
                 Shop now <ArrowRight size={18} />
               </button>
@@ -146,12 +154,12 @@ export default function HomePage({
       </section>
 
       {/* Bundle offer strip */}
-      <section className="bg-black text-white border-y border-white/10">
+      <section className="sf-trust-strip text-white border-y border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid sm:grid-cols-3 gap-4 text-center sm:text-left">
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center shrink-0">
-                <Tag className="text-pink-400" size={20} />
+              <div className="sf-trust-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                <Tag size={20} />
               </div>
               <div>
                 <p className="font-bold text-sm">Bundle & save</p>
@@ -159,8 +167,8 @@ export default function HomePage({
               </div>
             </div>
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center shrink-0">
-                <Truck className="text-pink-400" size={20} />
+              <div className="sf-trust-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                <Truck size={20} />
               </div>
               <div>
                 <p className="font-bold text-sm">Countrywide delivery</p>
@@ -168,8 +176,8 @@ export default function HomePage({
               </div>
             </div>
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center shrink-0">
-                <Flame className="text-pink-400" size={20} />
+              <div className="sf-trust-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                <Flame size={20} />
               </div>
               <div>
                 <p className="font-bold text-sm">{sellOuts.length} sell-outs live</p>
@@ -182,12 +190,12 @@ export default function HomePage({
 
       {/* Pink Thursday packages */}
       {theme === 'pink-thursday' && packages.length > 0 && (
-        <section className="bg-gradient-to-br from-pink-600 via-pink-500 to-amber-500 text-white py-14">
+        <section className="sf-pink-thursday-section text-white py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-8">
-              <p className="text-amber-200 text-xs font-black uppercase tracking-widest mb-2">Pink Thursday</p>
+              <p className="text-white/80 text-xs font-black uppercase tracking-widest mb-2">Pink Thursday</p>
               <h3 className="text-3xl font-display font-bold">3-in-1 Package offers</h3>
-              <p className="text-pink-100 text-sm mt-1">Soap + Hair + Facial & more — 3 categories, one combined Pink Thursday price</p>
+              <p className="text-pink-50 text-sm mt-1">Soap + Hair + Facial & more — 3 categories, one combined Pink Thursday price</p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {packages.map((pkg) => {
@@ -197,8 +205,8 @@ export default function HomePage({
                 const savings = getPackageSavings(pkg, products, getPrice);
 
                 return (
-                  <div key={pkg.id} className="bg-black/30 backdrop-blur border border-white/20 rounded-3xl p-5 flex flex-col">
-                    <div className="inline-flex items-center gap-1 bg-amber-400/20 text-amber-200 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full w-fit mb-3">
+                  <div key={pkg.id} className="sf-pink-thursday-card backdrop-blur border rounded-3xl p-5 flex flex-col">
+                    <div className="sf-pink-thursday-badge inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full w-fit mb-3">
                       3-in-1 offer
                     </div>
                     <h4 className="font-bold text-lg mb-3">{pkg.label}</h4>
@@ -208,7 +216,7 @@ export default function HomePage({
                         <div key={p.id} className="flex items-center gap-2 bg-white/10 rounded-xl p-2">
                           <img src={p.imageUrl} alt="" className="w-11 h-11 rounded-lg object-cover shrink-0" />
                           <div className="min-w-0 flex-1">
-                            <p className="text-[9px] font-bold text-amber-200 uppercase">{p.category}</p>
+                            <p className="text-[9px] font-bold text-white/80 uppercase">{p.category}</p>
                             <p className="text-xs font-semibold line-clamp-1">{p.name}</p>
                           </div>
                           <p className="text-xs font-bold text-pink-200 shrink-0">KSh {getPrice(p).toLocaleString()}</p>
@@ -221,7 +229,7 @@ export default function HomePage({
                         Was KSh {regularTotal.toLocaleString()} separately
                       </p>
                     )}
-                    <p className="text-3xl font-black text-amber-300 mb-1">
+                    <p className="text-3xl font-black text-white mb-1">
                       KSh {pkg.packagePrice.toLocaleString()}
                     </p>
                     {savings > 0 && (
@@ -230,7 +238,7 @@ export default function HomePage({
                     <p className="text-[10px] text-pink-200/70 mb-4">3 products · different categories · sold together</p>
                     <button
                       onClick={() => onAddPackage?.(pkg.productIds.filter(Boolean))}
-                      className="w-full py-3 bg-white text-pink-600 rounded-2xl font-bold hover:bg-amber-100 transition-colors mt-auto"
+                      className="w-full py-3 bg-white text-pink-600 rounded-2xl font-bold hover:bg-pink-50 transition-colors mt-auto"
                     >
                       Add full package to bag
                     </button>
@@ -253,7 +261,7 @@ export default function HomePage({
                 <div className="p-3">
                   <p className="font-bold text-xs line-clamp-2 mb-2">{product.name}</p>
                   <PromoPrice price={getEffectivePrice(product, homePromoConfig)} size="sm" />
-                  <button onClick={() => onAddToCart(product)} className="mt-2 w-full py-2 bg-pink-500 text-white rounded-xl text-xs font-bold">Add</button>
+                  <button onClick={() => onAddToCart(product)} className="sf-btn-primary mt-2 w-full py-2 rounded-xl text-xs font-bold">Add</button>
                 </div>
               </article>
             ))}
@@ -288,12 +296,12 @@ export default function HomePage({
 
       {/* Sell-outs */}
       {sellOuts.length > 0 && (
-        <section className="bg-gradient-to-b from-rose-50 to-white py-14">
+        <section className="sf-sellout-section py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-end justify-between mb-8 gap-4">
               <div>
                 <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold mb-3 ${
-                  theme === 'sellout-day' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-700'
+                  theme === 'sellout-day' ? 'bg-[#d4a017]/20 text-[#78350f] border border-[#d4a017]/30' : 'bg-rose-100 text-rose-700'
                 }`}>
                   <Flame size={14} /> {theme === 'sellout-day' ? 'Sell-out day deals' : 'Sell-outs'}
                 </div>
@@ -333,7 +341,7 @@ export default function HomePage({
                       referrerPolicy="no-referrer"
                     />
                     <span className={`absolute top-2 left-2 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
-                      theme === 'sellout-day' ? 'bg-amber-500' : 'bg-rose-500'
+                      theme === 'sellout-day' ? 'bg-black' : 'bg-rose-500'
                     }`}>
                       {theme === 'sellout-day' ? 'DEAL' : `Only ${product.stockQuantity} left`}
                     </span>
@@ -350,7 +358,11 @@ export default function HomePage({
                       <PromoPrice price={getEffectivePrice(product, homePromoConfig)} size="sm" />
                       <button
                         onClick={() => onAddToCart(product)}
-                        className="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center hover:bg-pink-500 text-lg leading-none shrink-0"
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg leading-none shrink-0 ${
+                          theme === 'sellout-day'
+                            ? 'bg-[#d4a017] text-black hover:bg-[#f5d061]'
+                            : 'bg-black text-white hover:bg-pink-500'
+                        }`}
                       >
                         +
                       </button>
@@ -437,9 +449,17 @@ export default function HomePage({
       )}
 
       {/* Motto CTA */}
-      <section className="bg-black text-white py-16">
+      <section className={`py-16 text-white ${
+        theme === 'pink-thursday'
+          ? 'bg-gradient-to-br from-pink-600 to-pink-500'
+          : theme === 'sellout-day'
+          ? 'bg-black border-t border-[#d4a017]/30'
+          : 'bg-black'
+      }`}>
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <p className="text-pink-400 font-bold text-sm mb-3">{BRAND.tagline}</p>
+          <p className={`font-bold text-sm mb-3 ${
+            theme === 'sellout-day' ? 'text-[#f5d061]' : theme === 'pink-thursday' ? 'text-white' : 'text-pink-400'
+          }`}>{BRAND.tagline}</p>
           <h3 className="text-3xl sm:text-4xl font-display font-bold mb-4">
             &ldquo;{BRAND.motto}&rdquo; ✨
           </h3>
@@ -455,7 +475,7 @@ export default function HomePage({
             </button>
             <button
               onClick={() => onNavigate('shop')}
-              className="px-6 py-3 rounded-full bg-pink-500 hover:bg-pink-400 font-bold text-sm"
+              className="sf-hero-cta px-6 py-3 rounded-full font-bold text-sm"
             >
               Start shopping
             </button>

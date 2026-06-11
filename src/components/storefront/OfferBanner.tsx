@@ -31,7 +31,7 @@ export default function OfferBanner({ onNavigate, homePromoConfig }: OfferBanner
       extra.unshift({
         id: 'live-pink',
         emoji: '✨',
-        text: `Pink Thursday is LIVE! ${pinkThursdayTimeLeft(homePromoConfig) ?? '24hr deals'} — packages & pink/gold prices`,
+        text: `Pink Thursday is LIVE! ${pinkThursdayTimeLeft(homePromoConfig) ?? '24hr deals'} — packages & pink prices`,
         highlight: 'Pink Thursday',
         cta: 'Shop deals',
         page: 'home' as StorePage,
@@ -71,15 +71,8 @@ export default function OfferBanner({ onNavigate, homePromoConfig }: OfferBanner
 
   const offer = liveOffers[index];
 
-  const bannerClass =
-    theme === 'pink-thursday'
-      ? 'bg-gradient-to-r from-pink-600 via-pink-500 to-amber-500'
-      : theme === 'sellout-day'
-      ? 'bg-gradient-to-r from-amber-600 via-amber-500 to-pink-500'
-      : 'bg-gradient-to-r from-pink-600 via-pink-500 to-rose-500';
-
   return (
-    <div className={`relative z-40 ${bannerClass} text-white overflow-hidden`}>
+    <div className="sf-offer-banner relative z-40 text-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-3 relative">
         <AnimatePresence mode="wait">
           <motion.div
