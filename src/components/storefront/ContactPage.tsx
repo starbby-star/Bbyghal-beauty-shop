@@ -1,6 +1,7 @@
 import { Phone, Mail, MapPin, Clock, Truck, Instagram } from 'lucide-react';
 import { BRAND } from '../../constants/brand';
 import ConnectButton from './ConnectButton';
+import SocialScanCard from './SocialScanCard';
 
 const TikTokIcon = () => (
   <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor">
@@ -45,10 +46,25 @@ export default function ContactPage() {
       </div>
 
       <div className="bg-black text-white rounded-3xl p-8">
-        <h3 className="font-bold mb-4">Follow Us</h3>
-        <div className="flex flex-wrap gap-4 text-sm">
-          <span className="flex items-center gap-2"><Instagram size={18} className="text-pink-400" /> Instagram: {BRAND.instagram}</span>
-          <span className="flex items-center gap-2"><TikTokIcon /> TikTok: {BRAND.tiktok}</span>
+        <h3 className="font-bold mb-2 text-center">Follow Us</h3>
+        <p className="text-sm text-gray-400 text-center mb-8">Tap the link or scan to follow</p>
+        <div className="grid sm:grid-cols-2 gap-6">
+          <SocialScanCard
+            platform="Instagram"
+            handle={BRAND.instagram.handle}
+            url={BRAND.instagram.url}
+            scanImage={BRAND.instagram.scanImage}
+            icon={<Instagram size={18} />}
+            accentClass="text-pink-400"
+          />
+          <SocialScanCard
+            platform="TikTok"
+            handle={BRAND.tiktok.handle}
+            url={BRAND.tiktok.url}
+            scanImage={BRAND.tiktok.scanImage}
+            icon={<TikTokIcon />}
+            accentClass="text-white"
+          />
         </div>
       </div>
 

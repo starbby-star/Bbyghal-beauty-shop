@@ -13,8 +13,16 @@ export const BRAND = {
   whatsappIntl: '254752520441',
   email: 'blumeraglowandgrow@gmail.com',
   location: 'Mururui, Kenya',
-  instagram: '@blumera',
-  tiktok: '@blumera',
+  instagram: {
+    handle: '@babyghalbeautyshop',
+    url: 'https://www.instagram.com/babyghalbeautyshop?igsh=ZmdmaHNzOXV4a2k1',
+    scanImage: '/instagram-scan.png',
+  },
+  tiktok: {
+    handle: '@bbyghalbeautyshop',
+    url: 'https://www.tiktok.com/@babyghalbeautyshop',
+    scanImage: '/tiktok-scan.png',
+  },
   businessHours: {
     weekdays: 'Monday – Friday: 8:00 AM – 6:00 PM',
     saturday: 'Saturday: 9:00 AM – 5:00 PM',
