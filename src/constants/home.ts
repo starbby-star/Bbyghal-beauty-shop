@@ -76,7 +76,7 @@ export const CHATBOT_FAQ = [
   {
     id: 'order',
     question: 'How do I order?',
-    answer: 'Add items to your bag, fill in your details, then tap Connect & send order. A PDF receipt is generated for you to share.',
+    answer: 'Add items to your bag, enter your name and WhatsApp number, pick your county and date, then tap Send order to BLUMERA. Your order goes straight to us — save your receipt to your WhatsApp after you pay.',
   },
   {
     id: 'braids',

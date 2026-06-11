@@ -2418,8 +2418,9 @@ export default function App() {
         orderNumber: whatsappDetails?.orderNumber,
         orderChannel: isWhatsAppOrder ? 'whatsapp' : undefined,
         negotiationStatus: isWhatsAppOrder ? 'Pending' : undefined,
-        deliveryLocation: whatsappDetails?.location,
+        deliveryLocation: whatsappDetails?.county ?? whatsappDetails?.location,
         deliveryDate: whatsappDetails?.deliveryDate,
+        serviceType: whatsappDetails?.serviceType,
       };
     });
 

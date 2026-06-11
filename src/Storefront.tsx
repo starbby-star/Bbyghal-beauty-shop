@@ -19,10 +19,17 @@ import GlowTipPopup from './components/storefront/GlowTipPopup';
 import PromoPrice from './components/storefront/PromoPrice';
 import { getActiveTheme, getActiveGlowTip, getEffectivePrice } from './utils/homePromos';
 import { getBraidStyle } from './utils/braidFilters';
-import { generateOrderNumber, openWhatsAppOrder } from './utils/whatsapp';
+import {
+  generateOrderNumber,
+  openWhatsAppOrderToAdmin,
+  cartToLineItems,
+  WhatsAppOrderInput,
+} from './utils/whatsapp';
+import { KENYA_COUNTIES } from './constants/kenya';
+import { OrderServiceType } from './types';
+import OrderReceiptModal from './components/storefront/OrderReceiptModal';
 import { WhatsAppCheckoutDetails } from './types';
 import { getReturningMember, saveMember } from './utils/members';
-import { generateReceiptPdf, shareReceiptPdf } from './utils/receiptPdf';
 
 const LogoImage = () => {
   const [error, setError] = React.useState(false);
@@ -91,8 +98,10 @@ export default function Storefront({
   const [activePage, setActivePage] = React.useState<StorePage>('home');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<Category>('All');
-  const [location, setLocation] = React.useState('');
+  const [county, setCounty] = React.useState('');
   const [deliveryDate, setDeliveryDate] = React.useState('');
+  const [serviceType, setServiceType] = React.useState<OrderServiceType>('payment_delivery');
+  const [pendingReceipt, setPendingReceipt] = React.useState<WhatsAppOrderInput | null>(null);
   const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
   const [wishlist, setWishlist] = React.useState<string[]>([]);
   const [showWishlist, setShowWishlist] = React.useState(false);
@@ -106,7 +115,7 @@ export default function Storefront({
       setMember(returning);
       setCheckoutCustomerName(returning.name);
       setCheckoutCustomerPhone(returning.phone.replace(/^254/, '0'));
-      if (returning.location) setLocation(returning.location);
+      if (returning.location) setCounty(returning.location);
       setShowWelcome(true);
     }
   }, [setCheckoutCustomerName, setCheckoutCustomerPhone]);
@@ -151,8 +160,13 @@ export default function Storefront({
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.name.localeCompare(b.name));
 
   const processWhatsAppCheckout = async () => {
-    if (!checkoutCustomerName?.trim() || !checkoutCustomerPhone?.trim() || !location?.trim() || !deliveryDate) {
-      alert('Please fill in all checkout details (Name, Phone, Location, Delivery Date)');
+    if (!checkoutCustomerName?.trim() || !checkoutCustomerPhone?.trim() || !county || !deliveryDate) {
+      alert('Please fill in your name, WhatsApp number, county, and required date');
+      return;
+    }
+    const phoneDigits = checkoutCustomerPhone.replace(/\D/g, '');
+    if (phoneDigits.length < 9) {
+      alert('Please enter a valid WhatsApp number (e.g. 0712 345 678)');
       return;
     }
     if (cart.length === 0) return;
@@ -160,36 +174,49 @@ export default function Storefront({
     setCheckoutLoading(true);
     try {
       const orderNumber = generateOrderNumber();
-      const details: WhatsAppCheckoutDetails = {
+      const lineItems = cartToLineItems(cart, (id) => {
+        const item = cart.find((c) => c.product.id === id);
+        return item ? getEffectivePrice(item.product, homePromoConfig).current : 0;
+      });
+
+      const orderInput: WhatsAppOrderInput = {
         orderNumber,
         customerName: checkoutCustomerName.trim(),
         customerPhone: checkoutCustomerPhone.trim(),
-        location: location.trim(),
+        county,
         deliveryDate,
         paymentMethod: checkoutPaymentMethod,
-      };
-
-      const receiptInput = {
-        ...details,
-        cart,
+        serviceType,
+        lineItems,
         subtotal: cartSubtotal,
         discount: cartDiscount,
         total: cartTotal,
       };
 
-      const pdfBlob = generateReceiptPdf(receiptInput);
-      await shareReceiptPdf(pdfBlob, orderNumber);
+      const details: WhatsAppCheckoutDetails = {
+        orderNumber,
+        customerName: orderInput.customerName,
+        customerPhone: orderInput.customerPhone,
+        location: county,
+        county,
+        deliveryDate,
+        paymentMethod: checkoutPaymentMethod,
+        serviceType,
+      };
+
+      openWhatsAppOrderToAdmin(orderInput);
 
       const saved = saveMember({
         name: details.customerName,
         phone: details.customerPhone,
-        location: details.location,
+        location: county,
         orderNumber,
       });
       setMember(saved);
 
-      openWhatsAppOrder(receiptInput);
       handleCheckout(details);
+      setIsCartOpen(false);
+      setPendingReceipt(orderInput);
     } finally {
       setCheckoutLoading(false);
     }
@@ -417,25 +444,79 @@ export default function Storefront({
                       </div>
                     ))}
                     <div className="bg-pink-50 border border-pink-100 rounded-2xl p-4">
-                      <p className="text-sm font-bold text-gray-800 mb-1">Connect to complete order</p>
-                      <p className="text-xs text-gray-600">Order + PDF receipt sent to <strong>{BRAND.whatsappDisplay}</strong> for negotiation & tracking.</p>
+                      <p className="text-sm font-bold text-gray-800 mb-1">Place your order</p>
+                      <p className="text-xs text-gray-600">
+                        Enter <strong>your WhatsApp number</strong> — your order opens straight to {BRAND.systemName}. Receipt goes to you after payment.
+                      </p>
                     </div>
                     <div className="space-y-3">
-                      {[
-                        { label: 'Name', value: checkoutCustomerName, set: setCheckoutCustomerName, type: 'text' },
-                        { label: 'Phone', value: checkoutCustomerPhone, set: setCheckoutCustomerPhone, type: 'tel' },
-                        { label: 'Location', value: location, set: setLocation, type: 'text' },
-                      ].map((f) => (
-                        <div key={f.label}>
-                          <label className="text-[10px] font-bold text-gray-400 uppercase">{f.label}</label>
-                          <input type={f.type} value={f.value} onChange={(e) => f.set(e.target.value)}
-                            className="w-full mt-1 px-3 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200" />
-                        </div>
-                      ))}
                       <div>
-                        <label className="text-[10px] font-bold text-gray-400 uppercase">Delivery date</label>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Your name</label>
+                        <input type="text" value={checkoutCustomerName} onChange={(e) => setCheckoutCustomerName(e.target.value)}
+                          placeholder="e.g. Ann"
+                          className="w-full mt-1 px-3 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Your WhatsApp number</label>
+                        <input type="tel" value={checkoutCustomerPhone} onChange={(e) => setCheckoutCustomerPhone(e.target.value)}
+                          placeholder="07XX XXX XXX"
+                          className="w-full mt-1 px-3 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">County</label>
+                        <select value={county} onChange={(e) => setCounty(e.target.value)}
+                          className="w-full mt-1 px-3 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200 bg-white">
+                          <option value="">Select county...</option>
+                          {KENYA_COUNTIES.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Required on (date)</label>
                         <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)}
                           className="w-full mt-1 px-3 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block">Service</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {([
+                            { id: 'payment_delivery' as OrderServiceType, label: 'Payment + Delivery' },
+                            { id: 'payment_only' as OrderServiceType, label: 'Payment only' },
+                          ]).map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => setServiceType(opt.id)}
+                              className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all ${
+                                serviceType === opt.id
+                                  ? 'bg-black text-white border-black'
+                                  : 'bg-white text-gray-600 border-gray-200 hover:border-pink-300'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block">Payment via</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(['Mpesa', 'Cash'] as const).map((method) => (
+                            <button
+                              key={method}
+                              type="button"
+                              onClick={() => setCheckoutPaymentMethod(method)}
+                              className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                                checkoutPaymentMethod === method
+                                  ? 'bg-pink-500 text-white border-pink-500'
+                                  : 'bg-white text-gray-600 border-gray-200'
+                              }`}
+                            >
+                              {method}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -449,15 +530,19 @@ export default function Storefront({
                   <div className="flex justify-between mb-3"><span>Total</span><span className="text-xl font-black">KSh {cartTotal}</span></div>
                   <button onClick={processWhatsAppCheckout} disabled={checkoutLoading}
                     className="w-full bg-pink-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-pink-400 disabled:opacity-60">
-                    <Sparkles size={18} /> {checkoutLoading ? 'Preparing receipt...' : 'Connect & send order'}
+                    <Sparkles size={18} /> {checkoutLoading ? 'Sending...' : 'Send order to BLUMERA'}
                   </button>
-                  <p className="text-[10px] text-center text-gray-400 mt-2">PDF receipt downloads · attach in chat to {BRAND.whatsappDisplay}</p>
+                  <p className="text-[10px] text-center text-gray-400 mt-2">Opens WhatsApp to {BRAND.systemName} · receipt saved to your number after pay</p>
                 </div>
               )}
             </motion.div>
           </>
         )}
       </AnimatePresence>
+
+      {pendingReceipt && (
+        <OrderReceiptModal order={pendingReceipt} onClose={() => setPendingReceipt(null)} />
+      )}
     </div>
   );
 }

@@ -105,15 +105,20 @@ export interface Sale {
   negotiationStatus?: NegotiationStatus;
   deliveryLocation?: string;
   deliveryDate?: string;
+  serviceType?: OrderServiceType;
 }
+
+export type OrderServiceType = 'payment_delivery' | 'payment_only';
 
 export interface WhatsAppCheckoutDetails {
   orderNumber: string;
   customerName: string;
   customerPhone: string;
   location: string;
+  county: string;
   deliveryDate: string;
   paymentMethod: PaymentMethod;
+  serviceType: OrderServiceType;
 }
 
 export interface CartItem {
