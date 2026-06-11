@@ -12,29 +12,31 @@ In the [Supabase SQL editor](https://supabase.com/dashboard), run:
 
 This creates `staff_accounts`, `staff_sessions`, `members`, PIN verify/lockout functions, and member upsert.
 
-## 2. Set GitHub / deployment secrets
+## 2. Seed staff PINs in Supabase
+
+After `001_security.sql`, run in the Supabase SQL editor:
+
+`supabase/migrations/002_seed_staff_pins.sql`
+
+This registers:
+
+| Role | Login key | PIN |
+|------|-----------|-----|
+| Administrator | `admin` | `20473405` |
+| Employee 1 | `employee_1` | `506316` |
+| Employee 2 | `employee_2` | `200316` |
+
+PINs are stored as bcrypt hashes only — not in the frontend bundle.
+
+**Alternative (CI / rotate):** `npm run seed:pins` with `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_PIN` / `EMPLOYEE_1_PIN` / `EMPLOYEE_2_PIN` env vars.
+
+## 3. Set GitHub / deployment secrets
 
 | Secret | Purpose |
 |--------|---------|
 | `VITE_SUPABASE_URL` | Public Supabase URL (Vite build) |
 | `VITE_SUPABASE_ANON_KEY` | Anon key (Vite build) |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Server/CI only** — PIN seeding |
-| `ADMIN_PIN` | 6–8 digit admin PIN (seed only) |
-| `EMPLOYEE_1_PIN` | Employee 1 PIN |
-| `EMPLOYEE_2_PIN` | Employee 2 PIN |
-
-Never commit real PINs to git. Use strong random 6–8 digit PINs (not `5063` / `1111`).
-
-## 3. Seed PIN hashes (one time)
-
-```bash
-export SUPABASE_URL="https://your-project.supabase.co"
-export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
-export ADMIN_PIN="your-strong-admin-pin"
-export EMPLOYEE_1_PIN="your-strong-emp1-pin"
-export EMPLOYEE_2_PIN="your-strong-emp2-pin"
-npm run seed:pins
-```
+| `SUPABASE_SERVICE_ROLE_KEY` | Optional — PIN rotation via `seed:pins` |
 
 ## 4. Employee discount rules
 
@@ -50,4 +52,4 @@ npm run seed:pins
 
 ## 6. Rotate PINs
 
-Re-run `npm run seed:pins` with new env PIN values (uses `admin_set_staff_pin` upsert).
+Edit and re-run `002_seed_staff_pins.sql`, or re-run `npm run seed:pins` with new env PIN values.
