@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Product } from '../../types';
+import { PublicProduct } from '../../utils/productPublic';
 
 interface ProductSlideshowProps {
-  products: Product[];
+  products: PublicProduct[];
   intervalMs?: number;
 }
 

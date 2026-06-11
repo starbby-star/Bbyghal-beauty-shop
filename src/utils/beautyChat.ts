@@ -1,4 +1,5 @@
-import { Product, HomePromoConfig } from '../types';
+import { HomePromoConfig } from '../types';
+import { PublicProduct } from './productPublic';
 import { getActiveTheme, getEffectivePrice, pinkThursdayTimeLeft, selloutTimeLeft } from './homePromos';
 import { BRAND } from '../constants/brand';
 
@@ -34,7 +35,7 @@ const GLOW_TIPS = [
 
 export function getBeautyResponse(
   query: string,
-  products: Product[],
+  products: PublicProduct[],
   promoConfig: HomePromoConfig
 ): string | null {
   const lower = query.toLowerCase();

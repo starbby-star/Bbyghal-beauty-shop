@@ -1,13 +1,22 @@
 import { CartItem, OrderServiceType, PaymentMethod } from '../types';
 import { BRAND } from '../constants/brand';
 import { DeliveryEstimate } from './delivery';
+import {
+  sanitizeCustomerName,
+  sanitizeCounty,
+  sanitizeOrderRef,
+  sanitizePhone,
+} from './sanitize';
 
 /** Shop WhatsApp: 0752520441 */
 export const SHOP_WHATSAPP_INTL = '254752520441';
 export const SHOP_WHATSAPP_DISPLAY = '0752520441';
 
 export function generateOrderNumber(): string {
-  return `BLU-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  const bytes = new Uint8Array(4);
+  crypto.getRandomValues(bytes);
+  const suffix = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+  return `BLU-${suffix}`;
 }
 
 export function normalizePhoneIntl(phone: string): string {
@@ -57,35 +66,46 @@ function formatItemsList(items: OrderLineItem[]): string {
   return items.map(formatItemLine).join('\n');
 }
 
+function safeOrderInput(input: WhatsAppOrderInput): WhatsAppOrderInput {
+  return {
+    ...input,
+    orderNumber: sanitizeOrderRef(input.orderNumber),
+    customerName: sanitizeCustomerName(input.customerName),
+    customerPhone: sanitizePhone(input.customerPhone),
+    county: sanitizeCounty(input.county),
+  };
+}
+
 /** Message from buyer to admin — conversational order text */
 export function buildWhatsAppOrderMessage(input: WhatsAppOrderInput): string {
-  const firstName = input.customerName.trim().split(/\s+/)[0];
-  const dateLabel = new Date(input.deliveryDate).toLocaleDateString('en-KE', {
+  const safe = safeOrderInput(input);
+  const firstName = safe.customerName.split(/\s+/)[0];
+  const dateLabel = new Date(safe.deliveryDate).toLocaleDateString('en-KE', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
 
-  let msg = `Hey! My name is ${input.customerName}.\n\n`;
+  let msg = `Hey! My name is ${safe.customerName}.\n\n`;
   msg += `I selected:\n`;
-  msg += `${formatItemsList(input.lineItems)}\n\n`;
+  msg += `${formatItemsList(safe.lineItems)}\n\n`;
   msg += `Required on: ${dateLabel}\n`;
-  msg += `I am in: ${input.county}\n`;
-  msg += `Service: ${serviceTypeLabel(input.serviceType)}\n`;
-  msg += `Payment: ${input.paymentMethod}\n\n`;
-  msg += `My WhatsApp: ${input.customerPhone}\n`;
-  msg += `Order ref: ${input.orderNumber}\n\n`;
-  if (input.discount > 0) {
-    msg += `Subtotal: KSh ${input.subtotal.toLocaleString()}\n`;
-    msg += `Discount: -KSh ${input.discount.toLocaleString()}\n`;
+  msg += `I am in: ${safe.county}\n`;
+  msg += `Service: ${serviceTypeLabel(safe.serviceType)}\n`;
+  msg += `Payment: ${safe.paymentMethod}\n\n`;
+  msg += `My WhatsApp: ${safe.customerPhone}\n`;
+  msg += `Order ref: ${safe.orderNumber}\n\n`;
+  if (safe.discount > 0) {
+    msg += `Subtotal: KSh ${safe.subtotal.toLocaleString()}\n`;
+    msg += `Discount: -KSh ${safe.discount.toLocaleString()}\n`;
   }
-  if (input.serviceType === 'payment_delivery' && input.deliveryEstimate) {
-    const d = input.deliveryEstimate;
+  if (safe.serviceType === 'payment_delivery' && safe.deliveryEstimate) {
+    const d = safe.deliveryEstimate;
     msg += `Delivery (${d.rangeLabel}): est. KSh ${d.amount.toLocaleString()} — *negotiable*\n`;
     msg += `_${d.note}_\n`;
   }
-  msg += `*Total (incl. est. delivery): KSh ${input.total.toLocaleString()}*\n\n`;
+  msg += `*Total (incl. est. delivery): KSh ${safe.total.toLocaleString()}*\n\n`;
   msg += `Please confirm my order and delivery fee, ${firstName} — ready to pay and receive. Thank you! ✨`;
 
   return msg;
@@ -93,7 +113,8 @@ export function buildWhatsAppOrderMessage(input: WhatsAppOrderInput): string {
 
 /** Receipt text for the buyer (save to their WhatsApp after payment / confirmation) */
 export function buildBuyerReceiptMessage(input: WhatsAppOrderInput): string {
-  const dateLabel = new Date(input.deliveryDate).toLocaleDateString('en-KE', {
+  const safe = safeOrderInput(input);
+  const dateLabel = new Date(safe.deliveryDate).toLocaleDateString('en-KE', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -101,26 +122,26 @@ export function buildBuyerReceiptMessage(input: WhatsAppOrderInput): string {
   });
 
   let msg = `${BRAND.systemName} — Order Receipt ✨\n`;
-  msg += `Order: ${input.orderNumber}\n`;
+  msg += `Order: ${safe.orderNumber}\n`;
   msg += `Date: ${new Date().toLocaleString('en-KE')}\n\n`;
-  msg += `Hi ${input.customerName},\n\n`;
+  msg += `Hi ${safe.customerName},\n\n`;
   msg += `Your order summary:\n\n`;
-  msg += `${formatItemsList(input.lineItems)}\n\n`;
-  if (input.discount > 0) {
-    msg += `Subtotal: KSh ${input.subtotal.toLocaleString()}\n`;
-    msg += `Discount: -KSh ${input.discount.toLocaleString()}\n`;
+  msg += `${formatItemsList(safe.lineItems)}\n\n`;
+  if (safe.discount > 0) {
+    msg += `Subtotal: KSh ${safe.subtotal.toLocaleString()}\n`;
+    msg += `Discount: -KSh ${safe.discount.toLocaleString()}\n`;
   }
-  if (input.serviceType === 'payment_delivery' && input.deliveryEstimate) {
-    const d = input.deliveryEstimate;
+  if (safe.serviceType === 'payment_delivery' && safe.deliveryEstimate) {
+    const d = safe.deliveryEstimate;
     msg += `Delivery (${d.rangeLabel}): est. KSh ${d.amount.toLocaleString()} (negotiable)\n`;
   }
-  msg += `*Total: KSh ${input.total.toLocaleString()}*\n\n`;
+  msg += `*Total: KSh ${safe.total.toLocaleString()}*\n\n`;
   msg += `Required on: ${dateLabel}\n`;
-  msg += `County: ${input.county}\n`;
-  msg += `Service: ${serviceTypeLabel(input.serviceType)}\n`;
-  msg += `Payment: ${input.paymentMethod}\n`;
-  if (input.serviceType === 'payment_delivery' && input.deliveryEstimate) {
-    msg += `\n${input.deliveryEstimate.note}\n`;
+  msg += `County: ${safe.county}\n`;
+  msg += `Service: ${serviceTypeLabel(safe.serviceType)}\n`;
+  msg += `Payment: ${safe.paymentMethod}\n`;
+  if (safe.serviceType === 'payment_delivery' && safe.deliveryEstimate) {
+    msg += `\n${safe.deliveryEstimate.note}\n`;
   }
   msg += `\nPay and share your M-Pesa confirmation with ${BRAND.systemName} on ${BRAND.whatsappDisplay}.\n`;
   msg += `Your receipt will be confirmed after payment.\n\n`;

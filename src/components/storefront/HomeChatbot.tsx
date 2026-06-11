@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, X, Sparkles, Send } from 'lucide-react';
-import { Member, Product, HomePromoConfig, Category } from '../../types';
+import { Member, HomePromoConfig, Category } from '../../types';
+import { PublicProduct } from '../../utils/productPublic';
 import { getFirstName } from '../../utils/members';
 import { BRAND, INTEREST_OPTIONS, StorePage } from '../../constants/brand';
 import { CHATBOT_FAQ, CHATBOT_GREETINGS } from '../../constants/home';
@@ -15,7 +16,7 @@ interface ChatMessage {
 
 interface HomeChatbotProps {
   member: Member | null;
-  products: Product[];
+  products: PublicProduct[];
   homePromoConfig: HomePromoConfig;
   onNavigate: (page: StorePage, category?: Category) => void;
   onOpenCart?: () => void;

@@ -4,7 +4,9 @@ import {
   ShoppingBag, Search, X, Plus, Minus, ShoppingCart,
   Heart, Sparkles, Star,
 } from 'lucide-react';
-import { Product, CartItem, PaymentMethod, Category, Member, HomePromoConfig } from './types';
+import { CartItem, PaymentMethod, Category, Member, HomePromoConfig } from './types';
+import { PublicProduct } from './utils/productPublic';
+import { sanitizeCustomerName, sanitizePhone, isValidPhoneDigits } from './utils/sanitize';
 import { CATEGORIES } from './constants';
 import { BRAND, StorePage } from './constants/brand';
 import BraidsShopSection from './components/BraidsShopSection';
@@ -47,9 +49,9 @@ const LogoImage = () => {
 };
 
 interface StorefrontProps {
-  products: Product[];
+  products: PublicProduct[];
   cart: CartItem[];
-  addToCart: (product: Product) => void;
+  addToCart: (product: PublicProduct) => void;
   removeFromCart: (productId: string) => void;
   updateCartQuantity: (productId: string, delta: number) => void;
   cartTotalItems: number;
@@ -104,7 +106,7 @@ export default function Storefront({
   const [deliveryDate, setDeliveryDate] = React.useState('');
   const [serviceType, setServiceType] = React.useState<OrderServiceType>('payment_delivery');
   const [pendingReceipt, setPendingReceipt] = React.useState<WhatsAppOrderInput | null>(null);
-  const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = React.useState<PublicProduct | null>(null);
   const [wishlist, setWishlist] = React.useState<string[]>([]);
   const [showWishlist, setShowWishlist] = React.useState(false);
   const [member, setMember] = React.useState<Member | null>(null);
@@ -140,7 +142,7 @@ export default function Storefront({
     setIsCartOpen(true);
   };
 
-  const toggleWishlist = (product: Product, e: React.MouseEvent) => {
+  const toggleWishlist = (product: PublicProduct, e: React.MouseEvent) => {
     e.stopPropagation();
     setWishlist((prev) =>
       prev.includes(product.id) ? prev.filter((id) => id !== product.id) : [...prev, product.id]
@@ -169,13 +171,19 @@ export default function Storefront({
   const orderTotal = cartTotal + deliveryFee;
 
   const processWhatsAppCheckout = async () => {
-    if (!checkoutCustomerName?.trim() || !checkoutCustomerPhone?.trim() || !county || !deliveryDate) {
+    const name = sanitizeCustomerName(checkoutCustomerName);
+    const phone = sanitizePhone(checkoutCustomerPhone);
+    if (!name || !phone || !county || !deliveryDate) {
       alert('Please fill in your name, WhatsApp number, county, and required date');
       return;
     }
-    const phoneDigits = checkoutCustomerPhone.replace(/\D/g, '');
-    if (phoneDigits.length < 9) {
+    if (!isValidPhoneDigits(phone)) {
       alert('Please enter a valid WhatsApp number (e.g. 0712 345 678)');
+      return;
+    }
+    const minDate = new Date().toISOString().split('T')[0];
+    if (deliveryDate < minDate) {
+      alert('Please choose today or a future date for delivery');
       return;
     }
     if (cart.length === 0) return;
@@ -190,8 +198,8 @@ export default function Storefront({
 
       const orderInput: WhatsAppOrderInput = {
         orderNumber,
-        customerName: checkoutCustomerName.trim(),
-        customerPhone: checkoutCustomerPhone.trim(),
+        customerName: name,
+        customerPhone: phone,
         county,
         deliveryDate,
         paymentMethod: checkoutPaymentMethod,
@@ -219,7 +227,7 @@ export default function Storefront({
 
       openWhatsAppOrderToAdmin(orderInput);
 
-      const saved = saveMember({
+      const saved = await saveMember({
         name: details.customerName,
         phone: details.customerPhone,
         location: county,
@@ -235,7 +243,7 @@ export default function Storefront({
     }
   };
 
-  const ProductCard = ({ product, index = 0 }: { product: Product; index?: number }) => (
+  const ProductCard = ({ product, index = 0 }: { product: PublicProduct; index?: number }) => (
     <motion.article
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}

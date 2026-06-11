@@ -1,4 +1,5 @@
-import { PinkThursdayPackage, Product } from '../types';
+import { PinkThursdayPackage } from '../types';
+import { PublicProduct } from './productPublic';
 import { getEffectivePrice } from './homePromos';
 import { HomePromoConfig } from '../types';
 
@@ -6,16 +7,16 @@ export const PINK_THURSDAY_PACKAGE_SIZE = 3;
 
 export function getPackageProducts(
   pkg: PinkThursdayPackage,
-  products: Product[]
-): Product[] {
+  products: PublicProduct[]
+): PublicProduct[] {
   return pkg.productIds
     .map((id) => products.find((p) => p.id === id))
-    .filter((p): p is Product => Boolean(p));
+    .filter((p): p is PublicProduct => Boolean(p));
 }
 
 export function isCompletePinkThursdayPackage(
   pkg: PinkThursdayPackage,
-  products: Product[]
+  products: PublicProduct[]
 ): boolean {
   if (pkg.productIds.length !== PINK_THURSDAY_PACKAGE_SIZE || !pkg.packagePrice) {
     return false;
@@ -28,8 +29,8 @@ export function isCompletePinkThursdayPackage(
 
 export function getPackageRegularTotal(
   pkg: PinkThursdayPackage,
-  products: Product[],
-  getPrice: (product: Product) => number
+  products: PublicProduct[],
+  getPrice: (product: PublicProduct) => number
 ): number {
   return getPackageProducts(pkg, products).reduce(
     (sum, p) => sum + getPrice(p),
@@ -39,8 +40,8 @@ export function getPackageRegularTotal(
 
 export function getPackageSavings(
   pkg: PinkThursdayPackage,
-  products: Product[],
-  getPrice: (product: Product) => number
+  products: PublicProduct[],
+  getPrice: (product: PublicProduct) => number
 ): number {
   const regular = getPackageRegularTotal(pkg, products, getPrice);
   return Math.max(0, regular - pkg.packagePrice);
@@ -48,14 +49,14 @@ export function getPackageSavings(
 
 export function getValidPinkThursdayPackages(
   packages: PinkThursdayPackage[],
-  products: Product[]
+  products: PublicProduct[]
 ): PinkThursdayPackage[] {
   return packages.filter((pkg) => isCompletePinkThursdayPackage(pkg, products));
 }
 
 export function categoriesUsedInPackage(
   pkg: PinkThursdayPackage,
-  products: Product[],
+  products: PublicProduct[],
   excludeSlot?: number
 ): Set<string> {
   const used = new Set<string>();
@@ -69,10 +70,10 @@ export function categoriesUsedInPackage(
 
 export function productsAvailableForPackageSlot(
   pkg: PinkThursdayPackage,
-  products: Product[],
+  products: PublicProduct[],
   slotIndex: number,
   inStockOnly = true
-): Product[] {
+): PublicProduct[] {
   const usedCategories = categoriesUsedInPackage(pkg, products, slotIndex);
   const usedIds = new Set(pkg.productIds.filter((_, i) => i !== slotIndex));
 
@@ -86,10 +87,10 @@ export function productsAvailableForPackageSlot(
 
 export function packagePriceLine(
   pkg: PinkThursdayPackage,
-  products: Product[],
+  products: PublicProduct[],
   config: HomePromoConfig
 ): { regular: number; packagePrice: number; savings: number } {
-  const getPrice = (p: Product) => getEffectivePrice(p, config).current;
+  const getPrice = (p: PublicProduct) => getEffectivePrice(p, config).current;
   const regular = getPackageRegularTotal(pkg, products, getPrice);
   const savings = Math.max(0, regular - pkg.packagePrice);
   return { regular, packagePrice: pkg.packagePrice, savings };

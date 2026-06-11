@@ -44,6 +44,16 @@ import { Product, Category, Role, Sale, PaymentMethod, Seller, PaymentStatus, Ca
 import { openCustomerWhatsApp } from './utils/whatsapp';
 import WhatsAppIcon from './components/storefront/WhatsAppIcon';
 import { getAllMembers } from './utils/members';
+import {
+  validateStoredSession,
+  revokeSession,
+  touchSession,
+  requireAdmin,
+  StaffLoginKey,
+} from './utils/auth';
+import { calcWebCartDiscount, calcPosEmployeeDiscount, calcPosAdminDiscount } from './utils/discounts';
+import { toPublicProducts, PublicProduct } from './utils/productPublic';
+import PinLogin from './components/admin/PinLogin';
 import HomePromoPanel from './components/admin/HomePromoPanel';
 import {
   loadHomePromoConfig,
@@ -2277,11 +2287,7 @@ export default function App() {
     contact: '',
     whatsappNumber: ''
   });
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [pin, setPin] = useState('');
-  const [loginMode, setLoginMode] = useState<'select' | 'pin'>('select');
-  const [loginTarget, setLoginTarget] = useState<'admin' | 'Employee 1' | 'Employee 2' | null>(null);
-  const EMP_PINS: Record<string, string> = { 'Employee 1': '1111', 'Employee 2': '2222' };
+  const [authChecking, setAuthChecking] = useState(true);
   const [requestedProducts, setRequestedProducts] = useState<RequestedProduct[]>([]);
   const [isRequestingProduct, setIsRequestingProduct] = useState(false);
   const [requestedProductName, setRequestedProductName] = useState('');
@@ -2295,7 +2301,42 @@ export default function App() {
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<PaymentMethod>('Mpesa');
   const [homePromoConfig, setHomePromoConfig] = useState<HomePromoConfig>(() => loadHomePromoConfig());
 
-  const ADMIN_PIN = '5063';
+  const publicProducts = useMemo(() => toPublicProducts(products), [products]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const session = await validateStoredSession();
+      if (cancelled) return;
+      if (session) {
+        setRole(session.role);
+        setActiveEmployee(session.role === 'staff' ? session.displayName : null);
+        setIsAuthenticated(true);
+      }
+      setAuthChecking(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const onActivity = () => touchSession();
+    const interval = setInterval(async () => {
+      const session = await validateStoredSession();
+      if (!session) {
+        setIsAuthenticated(false);
+        setActiveEmployee(null);
+        showNotification('Session expired — please sign in again');
+      }
+    }, 60000);
+    window.addEventListener('click', onActivity);
+    window.addEventListener('keydown', onActivity);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('click', onActivity);
+      window.removeEventListener('keydown', onActivity);
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const tick = () => {
@@ -2345,6 +2386,11 @@ export default function App() {
     showNotification('Added to cart', 'success');
   };
 
+  const addPublicToCart = (publicProduct: PublicProduct) => {
+    const full = products.find((p) => p.id === publicProduct.id);
+    if (full) addToCart(full);
+  };
+
   const removeFromCart = (productId: string) => {
     setCart(prev => prev.filter(item => item.product.id !== productId));
   };
@@ -2366,7 +2412,7 @@ export default function App() {
   );
   const cartSubtotal = promoCart.subtotal;
   const promoSavings = promoCart.savings;
-  const cartDiscount = cartTotalItems >= 3 ? 20 : (cartTotalItems >= 2 ? 10 : 0);
+  const cartDiscount = calcWebCartDiscount(cart);
   const cartTotal = cartSubtotal - cartDiscount;
 
   const handleCheckout = (whatsappDetails?: WhatsAppCheckoutDetails) => {
@@ -2380,9 +2426,15 @@ export default function App() {
       const itemDiscount = isFirstItem && cartDiscount > 0 ? cartDiscount : 0;
       const pIndex = updatedProducts.findIndex((p) => p.id === item.product.id);
       const product = pIndex >= 0 ? updatedProducts[pIndex] : item.product;
-      const fifo = deductStockFIFO(product, item.quantity);
+      const fifo = isWhatsAppOrder
+        ? {
+            stockQuantity: product.stockQuantity,
+            stockUpdates: product.stockUpdates ?? [],
+            consumedBuyingPrice: product.lastPrice,
+          }
+        : deductStockFIFO(product, item.quantity);
 
-      if (pIndex >= 0) {
+      if (!isWhatsAppOrder && pIndex >= 0) {
         updatedProducts[pIndex] = {
           ...product,
           stockQuantity: fifo.stockQuantity,
@@ -2393,8 +2445,9 @@ export default function App() {
       const unitPrice = getEffectivePrice(item.product, homePromoConfig).current;
       const deliveryFee = isFirstItem && isWhatsAppOrder ? (whatsappDetails?.deliveryFee ?? 0) : 0;
       const totalPrice = unitPrice * item.quantity - itemDiscount + deliveryFee;
-      const totalProfit =
-        (unitPrice - fifo.consumedBuyingPrice) * item.quantity - itemDiscount;
+      const totalProfit = isWhatsAppOrder
+        ? 0
+        : (unitPrice - fifo.consumedBuyingPrice) * item.quantity - itemDiscount;
 
       return {
         id: Math.random().toString(36).substr(2, 9),
@@ -2428,7 +2481,7 @@ export default function App() {
     });
 
     setSales([...newSales, ...sales]);
-    setProducts(updatedProducts);
+    if (!isWhatsAppOrder) setProducts(updatedProducts);
     setCart([]);
     setIsCartOpen(false);
     setCheckoutCustomerName('');
@@ -2442,21 +2495,46 @@ export default function App() {
   };
 
   const handleConfirmWhatsAppOrder = (orderNumber: string) => {
+    if (!requireAdmin(role, 'confirm WhatsApp order')) {
+      showNotification('Only admin can confirm web orders', 'error');
+      return;
+    }
+    const orderLines = sales.filter((s) => s.orderNumber === orderNumber);
+    if (!orderLines.length) return;
+
+    const buyingBySaleId = new Map<string, number>();
+    let updatedProducts = [...products];
+    for (const sale of orderLines) {
+      const pIndex = updatedProducts.findIndex((p) => p.id === sale.productId);
+      if (pIndex < 0) continue;
+      const fifo = deductStockFIFO(updatedProducts[pIndex], sale.quantity);
+      buyingBySaleId.set(sale.id, fifo.consumedBuyingPrice);
+      updatedProducts[pIndex] = {
+        ...updatedProducts[pIndex],
+        stockQuantity: fifo.stockQuantity,
+        stockUpdates: fifo.stockUpdates,
+      };
+    }
+    setProducts(updatedProducts);
+
     setSales(
-      sales.map((s) =>
-        s.orderNumber === orderNumber
-          ? {
-              ...s,
-              negotiationStatus: 'Confirmed',
-              paymentStatus: 'Paid',
-              amountPaid: s.sellingPrice * s.quantity - (s.discount || 0),
-              debtAmount: 0,
-              clearedAt: new Date().toISOString(),
-            }
-          : s
-      )
+      sales.map((s) => {
+        if (s.orderNumber !== orderNumber) return s;
+        const buyingPrice = buyingBySaleId.get(s.id) ?? s.buyingPrice;
+        const profit = (s.sellingPrice - buyingPrice) * s.quantity - (s.discount || 0);
+        return {
+          ...s,
+          buyingPrice,
+          profit,
+          negotiationStatus: 'Confirmed' as const,
+          paymentStatus: 'Paid' as const,
+          amountPaid: s.sellingPrice * s.quantity - (s.discount || 0) + (s.deliveryFee || 0),
+          debtAmount: 0,
+          clearedAt: new Date().toISOString(),
+        };
+      })
     );
-    showNotification(`Order ${orderNumber} confirmed`, 'success');
+    showNotification(`Order ${orderNumber} confirmed — stock updated`, 'success');
   };
 
   const visibleSales = useMemo(() => {
@@ -2620,11 +2698,16 @@ export default function App() {
       return;
     }
 
+    const appliedDiscount =
+      role === 'admin'
+        ? calcPosAdminDiscount(discount, selectedProductForSale)
+        : calcPosEmployeeDiscount(selectedProductForSale, saleQuantity);
+
     const fifo = deductStockFIFO(selectedProductForSale, saleQuantity);
-    const totalPrice = selectedProductForSale.sellingPrice * saleQuantity - discount;
+    const totalPrice = selectedProductForSale.sellingPrice * saleQuantity - appliedDiscount;
     const debtAmount = totalPrice - amountPaid;
     const totalProfit =
-      (selectedProductForSale.sellingPrice - fifo.consumedBuyingPrice) * saleQuantity - discount;
+      (selectedProductForSale.sellingPrice - fifo.consumedBuyingPrice) * saleQuantity - appliedDiscount;
 
     const newSale: Sale = {
       id: Math.random().toString(36).substr(2, 9),
@@ -2644,7 +2727,7 @@ export default function App() {
       sellerName: role === 'admin' ? selectedSeller : (activeEmployee || selectedSeller),
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
-      discount: discount > 0 ? discount : undefined,
+      discount: appliedDiscount > 0 ? appliedDiscount : undefined,
       createdAt: new Date().toISOString(),
     };
 
@@ -2670,6 +2753,10 @@ export default function App() {
   };
 
   const handleClearDebt = (saleId: string) => {
+    if (!requireAdmin(role, 'clear debt')) {
+      showNotification('Only admin can clear debts', 'error');
+      return;
+    }
     setSales(sales.map(s => {
       if (s.id === saleId) {
         return {
@@ -2842,9 +2929,9 @@ export default function App() {
       return (
         <>
           <Storefront
-            products={products}
+            products={publicProducts}
             cart={cart}
-            addToCart={addToCart}
+            addToCart={addPublicToCart}
             removeFromCart={removeFromCart}
             updateCartQuantity={updateCartQuantity}
             cartTotalItems={cartTotalItems}
@@ -2915,159 +3002,17 @@ export default function App() {
           <p className="text-pink-500 font-bold text-sm tracking-wide mb-1">{BRAND.tagline}</p>
           <p className="text-gray-500 font-medium text-lg mb-8">{BRAND.shopName}</p>
 
-          <AnimatePresence mode="wait">
-            {loginMode === 'select' ? (
-              <motion.div
-                key="select"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="space-y-4"
-              >
-                <p className="text-gray-500 mb-6 font-medium">Please select your role to continue</p>
-
-                <button
-                  onClick={() => {
-                    setLoginTarget('Employee 1');
-                    setLoginMode('pin');
-                  }}
-                  className="w-full flex items-center justify-between p-6 bg-pink-50 rounded-3xl hover:bg-pink-100 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-pink-500 shadow-sm">
-                      <Users size={24} />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-black text-gray-800">Employee 1</p>
-                      <p className="text-xs text-gray-400">Record sales · check stock</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="text-pink-300 group-hover:text-pink-500 transition-colors" />
-                </button>
-
-                <button
-                  onClick={() => {
-                    setLoginTarget('Employee 2');
-                    setLoginMode('pin');
-                  }}
-                  className="w-full flex items-center justify-between p-6 bg-pink-50 rounded-3xl hover:bg-pink-100 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-pink-500 shadow-sm">
-                      <Users size={24} />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-black text-gray-800">Employee 2</p>
-                      <p className="text-xs text-gray-400">Record sales · check stock</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="text-pink-300 group-hover:text-pink-500 transition-colors" />
-                </button>
-
-                <button
-                  onClick={() => {
-                    setLoginTarget('admin');
-                    setLoginMode('pin');
-                  }}
-                  className="w-full flex items-center justify-between p-6 bg-gray-50 rounded-3xl hover:bg-gray-100 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-500 shadow-sm">
-                      <Lock size={24} />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-black text-gray-800">Administrator</p>
-                      <p className="text-xs text-gray-400">Full system access</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="text-gray-300 group-hover:text-gray-500 transition-colors" />
-                </button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="pin"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <button
-                    onClick={() => setLoginMode('select')}
-                    className="p-2 hover:bg-gray-100 rounded-xl text-gray-400"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-                  <p className="text-gray-500 font-medium">Enter {loginTarget === 'admin' ? 'Admin' : loginTarget} PIN</p>
-                </div>
-
-                <div className="flex justify-center gap-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`w-12 h-16 rounded-2xl border-2 flex items-center justify-center text-2xl font-black transition-all ${pin.length > i ? 'border-pink-500 bg-pink-50 text-pink-600' : 'border-pink-100 text-gray-200'}`}
-                    >
-                      {pin.length > i ? '•' : ''}
-                    </div>
-                  ))}
-                </div>
-
-                <input
-                  type="password"
-                  maxLength={4}
-                  value={pin}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    setPin(val);
-                    const isSuccess = loginTarget === 'admin' ? val === ADMIN_PIN : (loginTarget && val === EMP_PINS[loginTarget]);
-                    if (isSuccess) {
-                      setRole(loginTarget === 'admin' ? 'admin' : 'staff');
-                      setIsAdminAuthenticated(loginTarget === 'admin');
-                      setActiveEmployee(loginTarget === 'admin' ? null : loginTarget);
-                      setIsAuthenticated(true);
-                      setPin('');
-                    } else if (val.length === 4) {
-                      showNotification('Incorrect PIN');
-                      setPin('');
-                    }
-                  }}
-                  autoFocus
-                  className="absolute opacity-0 pointer-events-none"
-                />
-
-                <div className="grid grid-cols-3 gap-4 pt-4">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, '←'].map((num, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => {
-                        if (num === 'C') setPin('');
-                        else if (num === '←') setPin(pin.slice(0, -1));
-                        else if (typeof num === 'number' && pin.length < 4) {
-                          const newVal = pin + num;
-                          setPin(newVal);
-                          const isSuccess = loginTarget === 'admin' ? newVal === ADMIN_PIN : (loginTarget && newVal === EMP_PINS[loginTarget]);
-                          if (isSuccess) {
-                            setRole(loginTarget === 'admin' ? 'admin' : 'staff');
-                            setIsAdminAuthenticated(loginTarget === 'admin');
-                            setActiveEmployee(loginTarget === 'admin' ? null : loginTarget);
-                            setIsAuthenticated(true);
-                            setPin('');
-                          } else if (newVal.length === 4) {
-                            showNotification('Incorrect PIN');
-                            setPin('');
-                          }
-                        }
-                      }}
-                      className="h-16 rounded-2xl bg-pink-50 text-xl font-black text-pink-600 hover:bg-pink-100 active:scale-95 transition-all"
-                    >
-                      {num}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <p className="text-gray-500 mb-4 font-medium text-sm">Secure sign-in · PINs verified on Supabase</p>
+          <PinLogin
+            onSuccess={({ role: r, displayName, loginKey }: { role: Role; displayName: string; loginKey: StaffLoginKey }) => {
+              setRole(r);
+              setActiveEmployee(r === 'staff' ? displayName : null);
+              setIsAuthenticated(true);
+              setShowLogin(false);
+              showNotification(`Welcome, ${displayName}`, 'success');
+            }}
+            onError={(msg) => showNotification(msg)}
+          />
         </motion.div>
       </div>
     );
@@ -3122,9 +3067,9 @@ export default function App() {
         <div className="p-4 border-t border-white/10">
           <button
             onClick={() => {
+              void revokeSession();
               setIsAuthenticated(false);
-              setIsAdminAuthenticated(false);
-              setLoginMode('select');
+              setActiveEmployee(null);
             }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/10 hover:text-white transition-all font-medium text-sm"
           >
@@ -4081,7 +4026,7 @@ export default function App() {
                                   <WhatsAppIcon size={12} /> Connect
                                 </button>
                               )}
-                              {sale.orderNumber && sale.negotiationStatus === 'Pending' && (
+                              {role === 'admin' && sale.orderNumber && sale.negotiationStatus === 'Pending' && (
                                 <button
                                   onClick={() => handleConfirmWhatsAppOrder(sale.orderNumber!)}
                                   className="text-xs font-bold text-pink-600 hover:text-pink-700 underline"
@@ -4603,22 +4548,28 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Discount Amount (KSh)</label>
-                    <input
-                      type="number"
-                      value={discount}
-                      onChange={(e) => {
-                        const newDiscount = Number(e.target.value);
-                        setDiscount(newDiscount);
-                        if (paymentStatus === 'Paid') {
-                          setAmountPaid((selectedProductForSale.sellingPrice * saleQuantity) - newDiscount);
-                        }
-                      }}
-                      min="0"
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
+                  {role === 'admin' ? (
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">Discount Amount (KSh) — admin only</label>
+                      <input
+                        type="number"
+                        value={discount}
+                        onChange={(e) => {
+                          const newDiscount = calcPosAdminDiscount(Number(e.target.value), selectedProductForSale);
+                          setDiscount(newDiscount);
+                          if (paymentStatus === 'Paid') {
+                            setAmountPaid((selectedProductForSale.sellingPrice * saleQuantity) - newDiscount);
+                          }
+                        }}
+                        min="0"
+                        className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-gray-50 rounded-xl text-xs text-gray-500">
+                      No manual discounts for staff. System bundle (KSh 20 off 3+ items) applies on the online shop only — braids excluded.
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>

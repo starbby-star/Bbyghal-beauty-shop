@@ -151,7 +151,7 @@ export default function PinkThursdayPackageBuilder({
                     >
                       <option value="">Choose product...</option>
                       {Object.entries(
-                        available.reduce<Record<string, Product[]>>((acc, p) => {
+                        available.reduce<Record<string, typeof available>>((acc, p) => {
                           if (!acc[p.category]) acc[p.category] = [];
                           acc[p.category].push(p);
                           return acc;

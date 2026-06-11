@@ -1,16 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Plus, Heart, Star } from 'lucide-react';
-import { Product } from '../types';
+import { PublicProduct } from '../utils/productPublic';
 import BraidFilters from './BraidFilters';
 import { BraidFilterState, emptyBraidFilters, filterBraidProducts, getBraidStyle } from '../utils/braidFilters';
 
 interface BraidsShopSectionProps {
-  products: Product[];
-  addToCart: (product: Product) => void;
-  onProductClick: (product: Product) => void;
+  products: PublicProduct[];
+  addToCart: (product: PublicProduct) => void;
+  onProductClick: (product: PublicProduct) => void;
   wishlist: string[];
-  onToggleWishlist: (product: Product, e: React.MouseEvent) => void;
+  onToggleWishlist: (product: PublicProduct, e: React.MouseEvent) => void;
 }
 
 export default function BraidsShopSection({

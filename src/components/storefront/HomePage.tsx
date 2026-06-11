@@ -3,7 +3,8 @@ import { motion } from 'motion/react';
 import {
   ArrowRight, Flame, Sparkles, Star, Truck, Tag, ShoppingBag,
 } from 'lucide-react';
-import { Product, Category, HomePromoConfig } from '../../types';
+import { Category, HomePromoConfig } from '../../types';
+import { PublicProduct } from '../../utils/productPublic';
 import { BRAND, StorePage } from '../../constants/brand';
 import { HOME_TRUST_BADGES } from '../../constants/home';
 import { LOW_STOCK_THRESHOLD } from '../../utils/inventory';
@@ -24,11 +25,11 @@ import ConnectButton from './ConnectButton';
 import PromoPrice from './PromoPrice';
 
 interface HomePageProps {
-  products: Product[];
+  products: PublicProduct[];
   homePromoConfig: HomePromoConfig;
   onNavigate: (page: StorePage, category?: Category) => void;
-  onProductClick: (product: Product) => void;
-  onAddToCart: (product: Product) => void;
+  onProductClick: (product: PublicProduct) => void;
+  onAddToCart: (product: PublicProduct) => void;
   onAddPackage?: (productIds: string[]) => void;
 }
 
@@ -53,7 +54,7 @@ export default function HomePage({
 
   const adminSellouts = homePromoConfig.selloutProducts
     .map((promo) => products.find((p) => p.id === promo.productId))
-    .filter((p): p is Product => Boolean(p && p.stockQuantity > 0));
+    .filter((p): p is PublicProduct => Boolean(p && p.stockQuantity > 0));
 
   const sellOuts =
     theme === 'sellout-day' && adminSellouts.length > 0
@@ -65,7 +66,7 @@ export default function HomePage({
 
   const pinkProducts = homePromoConfig.pinkThursdayProducts
     .map((promo) => products.find((p) => p.id === promo.productId))
-    .filter((p): p is Product => Boolean(p && p.stockQuantity > 0));
+    .filter((p): p is PublicProduct => Boolean(p && p.stockQuantity > 0));
 
   const newArrivals = [...inStock]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -200,7 +201,7 @@ export default function HomePage({
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {packages.map((pkg) => {
                 const pkgProducts = getPackageProducts(pkg, products);
-                const getPrice = (p: Product) => getEffectivePrice(p, homePromoConfig).current;
+                const getPrice = (p: PublicProduct) => getEffectivePrice(p, homePromoConfig).current;
                 const regularTotal = getPackageRegularTotal(pkg, products, getPrice);
                 const savings = getPackageSavings(pkg, products, getPrice);
 

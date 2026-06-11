@@ -1,4 +1,4 @@
-import { Product } from '../types';
+import { PublicProduct } from './productPublic';
 
 export interface BraidFilterState {
   search: string;
@@ -20,19 +20,19 @@ export const emptyBraidFilters = (): BraidFilterState => ({
   colorNumber: '',
 });
 
-export function getBraidStyle(product: Product): string {
+export function getBraidStyle(product: PublicProduct): string {
   return product.braidStyle || product.braidType || '';
 }
 
-export function isBraidProduct(product: Product): boolean {
+export function isBraidProduct(product: PublicProduct): boolean {
   return product.category === 'Braids';
 }
 
-export function filterBraidProducts(
-  products: Product[],
+export function filterBraidProducts<T extends PublicProduct>(
+  products: T[],
   filters: BraidFilterState,
   options?: { inStockOnly?: boolean }
-): Product[] {
+): T[] {
   const inStockOnly = options?.inStockOnly ?? false;
   const search = filters.search.trim().toLowerCase();
   const brandFilter = filters.brand === '__custom__' ? filters.customBrand.trim() : filters.brand;

@@ -4,9 +4,9 @@ import {
   HomePromoConfig,
   HomeTheme,
   PinkThursdayPackage,
-  Product,
   PromoProductPrice,
 } from '../types';
+import { PublicProduct } from './productPublic';
 import { getValidPinkThursdayPackages } from './pinkThursdayPackages';
 
 const STORAGE_KEY = 'blumera_home_promos';
@@ -185,7 +185,7 @@ function findPromoPrice(
   return list.find((p) => p.productId === productId);
 }
 
-export function getEffectivePrice(product: Product, config: HomePromoConfig): EffectivePrice {
+export function getEffectivePrice(product: PublicProduct, config: HomePromoConfig): EffectivePrice {
   const theme = getActiveTheme(config);
 
   if (theme === 'pink-thursday') {
@@ -215,7 +215,7 @@ export function getEffectivePrice(product: Product, config: HomePromoConfig): Ef
 
 export function getPinkThursdayPackages(
   config: HomePromoConfig,
-  products: Product[] = []
+  products: PublicProduct[] = []
 ): PinkThursdayPackage[] {
   if (getActiveTheme(config) !== 'pink-thursday') return [];
   return getValidPinkThursdayPackages(config.pinkThursdayPackages, products);
