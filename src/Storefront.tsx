@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  ShoppingBag, Search, X, Plus, Minus, ShoppingCart, CheckCircle2,
-  Heart, Sparkles, Star, ArrowRight,
+  ShoppingBag, Search, X, Plus, Minus, ShoppingCart,
+  Heart, Sparkles, Star,
 } from 'lucide-react';
 import { Product, CartItem, PaymentMethod, Category, Member } from './types';
 import { CATEGORIES } from './constants';
@@ -12,6 +12,9 @@ import WelcomeChat from './components/storefront/WelcomeChat';
 import AboutPage from './components/storefront/AboutPage';
 import ContactPage from './components/storefront/ContactPage';
 import ConnectButton from './components/storefront/ConnectButton';
+import OfferBanner from './components/storefront/OfferBanner';
+import HomePage from './components/storefront/HomePage';
+import HomeChatbot from './components/storefront/HomeChatbot';
 import { getBraidStyle } from './utils/braidFilters';
 import { generateOrderNumber, openWhatsAppOrder } from './utils/whatsapp';
 import { WhatsAppCheckoutDetails } from './types';
@@ -99,6 +102,10 @@ export default function Storefront({
     }
   }, [setCheckoutCustomerName, setCheckoutCustomerPhone]);
 
+  React.useEffect(() => {
+    if (activePage === 'home') setShowWelcome(false);
+  }, [activePage]);
+
   const navigate = (page: StorePage, category?: Category) => {
     setActivePage(page);
     if (category) setSelectedCategory(category);
@@ -125,8 +132,6 @@ export default function Storefront({
       return matchesCategory && matchesSearch && p.stockQuantity > 0;
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.name.localeCompare(b.name));
-
-  const featuredProducts = products.filter((p) => p.category !== 'Braids' && p.stockQuantity > 0).slice(0, 4);
 
   const processWhatsAppCheckout = async () => {
     if (!checkoutCustomerName?.trim() || !checkoutCustomerPhone?.trim() || !location?.trim() || !deliveryDate) {
@@ -254,40 +259,15 @@ export default function Storefront({
         </nav>
       </header>
 
+      <OfferBanner onNavigate={(page) => navigate(page)} />
+
       {activePage === 'home' && (
-        <section className="blumera-hero text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 relative">
-            <div className="grid lg:grid-cols-2 gap-10 items-center">
-              <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
-                <p className="text-pink-400 font-bold text-sm mb-3">{BRAND.tagline}</p>
-                <h2 className="text-4xl sm:text-5xl font-display font-bold mb-3">{BRAND.systemName}</h2>
-                <p className="text-gray-400 mb-2">{BRAND.shopName}</p>
-                <p className="text-gray-500 mb-8 max-w-md">Premium wigs, skincare & beauty essentials — glow in and out.</p>
-                <div className="flex flex-wrap gap-3">
-                  <button onClick={() => navigate('shop')} className="inline-flex items-center gap-2 bg-pink-500 text-white px-7 py-3.5 rounded-full font-bold hover:bg-pink-400">
-                    Shop <ArrowRight size={18} />
-                  </button>
-                  <button onClick={() => navigate('braids')} className="px-7 py-3.5 rounded-full font-bold border border-white/20 hover:bg-white/10">Braids</button>
-                  <ConnectButton className="bg-white text-black hover:bg-gray-100" />
-                </div>
-              </motion.div>
-              {featuredProducts.length > 0 && (
-                <div className="hidden lg:grid grid-cols-2 gap-3">
-                  {featuredProducts.map((p, i) => (
-                    <button key={p.id} onClick={() => setSelectedProduct(p)} className={`relative rounded-2xl overflow-hidden ${i === 0 ? 'col-span-2 aspect-[2/1]' : 'aspect-square'}`}>
-                      <img src={p.imageUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                      <div className="absolute bottom-3 left-3 text-left">
-                        <p className="text-white font-bold text-sm">{p.name}</p>
-                        <p className="text-pink-400 font-black text-sm">KSh {p.sellingPrice}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
+        <HomePage
+          products={products}
+          onNavigate={navigate}
+          onProductClick={setSelectedProduct}
+          onAddToCart={addToCart}
+        />
       )}
 
       {activePage === 'shop' && (
@@ -334,8 +314,16 @@ export default function Storefront({
         </div>
       </footer>
 
-      {showWelcome && member && (
+      {showWelcome && member && activePage !== 'home' && (
         <WelcomeChat member={member} onClose={() => setShowWelcome(false)} onNavigate={navigate} />
+      )}
+
+      {activePage === 'home' && (
+        <HomeChatbot
+          member={member}
+          onNavigate={navigate}
+          onOpenCart={() => setIsCartOpen(true)}
+        />
       )}
 
       {/* Product modal */}
