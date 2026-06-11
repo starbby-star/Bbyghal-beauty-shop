@@ -45,7 +45,7 @@ export function getBeautyResponse(
     if (theme === 'pink-thursday') {
       const left = pinkThursdayTimeLeft(promoConfig);
       const pkgCount = promoConfig.pinkThursdayPackages.length;
-      return `It's Pink Thursday at ${BRAND.systemName}! ✨ Pink & gold deals are live${left ? ` (${left})` : ''}. ${pkgCount > 0 ? `We have ${pkgCount} special package deal${pkgCount > 1 ? 's' : ''} on the home page!` : 'Check the home page for special prices!'}`;
+      return `It's Pink Thursday at ${BRAND.systemName}! ✨ Pink & gold deals are live${left ? ` (${left})` : ''}. ${pkgCount > 0 ? `We have ${pkgCount} special 3-in-1 package${pkgCount > 1 ? 's' : ''} — 3 products from different categories at one combined price!` : 'Check the home page for special prices!'}`;
     }
     return `Pink Thursday is our special weekly glow day with pink & gold deals and package bundles! Follow us to catch the next one — it runs for 24 hours when active.`;
   }

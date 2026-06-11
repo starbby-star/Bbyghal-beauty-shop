@@ -1,6 +1,6 @@
 import React from 'react';
 import { Plus, Trash2, Sparkles, Flame, Sun, ToggleLeft, ToggleRight } from 'lucide-react';
-import { HomePromoConfig, Product, PinkThursdayPackage, GlowTip } from '../../types';
+import { HomePromoConfig, Product, GlowTip } from '../../types';
 import {
   activatePinkThursday,
   activateSelloutDay,
@@ -10,6 +10,7 @@ import {
   pinkThursdayTimeLeft,
   selloutTimeLeft,
 } from '../../utils/homePromos';
+import PinkThursdayPackageBuilder from './PinkThursdayPackageBuilder';
 
 interface HomePromoPanelProps {
   config: HomePromoConfig;
@@ -60,32 +61,6 @@ export default function HomePromoPanel({
     save({
       ...draft,
       [listKey]: draft[listKey].filter((p) => p.productId !== productId),
-    });
-  };
-
-  const addPackage = () => {
-    const pkg: PinkThursdayPackage = {
-      id: `pkg-${Date.now()}`,
-      label: 'Glow Trio Package',
-      productIds: [],
-      packagePrice: 0,
-    };
-    save({ ...draft, pinkThursdayPackages: [...draft.pinkThursdayPackages, pkg] });
-  };
-
-  const updatePackage = (id: string, patch: Partial<PinkThursdayPackage>) => {
-    save({
-      ...draft,
-      pinkThursdayPackages: draft.pinkThursdayPackages.map((p) =>
-        p.id === id ? { ...p, ...patch } : p
-      ),
-    });
-  };
-
-  const removePackage = (id: string) => {
-    save({
-      ...draft,
-      pinkThursdayPackages: draft.pinkThursdayPackages.filter((p) => p.id !== id),
     });
   };
 
@@ -275,59 +250,12 @@ export default function HomePromoPanel({
               <PromoProductPicker listKey="pinkThursdayProducts" accent="Pink Thursday" />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-bold text-gray-800">Package deals (e.g. 3 for one price)</h4>
-                <button onClick={addPackage} className="flex items-center gap-1 text-xs font-bold text-pink-600">
-                  <Plus size={14} /> Add package
-                </button>
-              </div>
-              {draft.pinkThursdayPackages.map((pkg) => (
-                <div key={pkg.id} className="p-4 mb-3 bg-amber-50/50 border border-amber-100 rounded-2xl space-y-3">
-                  <div className="flex gap-3 flex-wrap">
-                    <input
-                      value={pkg.label}
-                      onChange={(e) => updatePackage(pkg.id, { label: e.target.value })}
-                      placeholder="Package name"
-                      className="flex-1 min-w-[160px] px-3 py-2 border rounded-xl text-sm font-bold"
-                    />
-                    <input
-                      type="number"
-                      value={pkg.packagePrice || ''}
-                      onChange={(e) => updatePackage(pkg.id, { packagePrice: Number(e.target.value) })}
-                      placeholder="Package price KSh"
-                      className="w-36 px-3 py-2 border rounded-xl text-sm font-bold"
-                    />
-                    <button onClick={() => removePackage(pkg.id)} className="p-2 text-red-400">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {inStock.map((p) => {
-                      const selected = pkg.productIds.includes(p.id);
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => {
-                            const ids = selected
-                              ? pkg.productIds.filter((id) => id !== p.id)
-                              : [...pkg.productIds, p.id];
-                            updatePackage(pkg.id, { productIds: ids });
-                          }}
-                          className={`text-xs px-2 py-1 rounded-lg border ${
-                            selected
-                              ? 'bg-pink-500 text-white border-pink-500'
-                              : 'bg-white text-gray-600 border-gray-200'
-                          }`}
-                        >
-                          {p.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <PinkThursdayPackageBuilder
+              packages={draft.pinkThursdayPackages}
+              products={products}
+              onChange={(pinkThursdayPackages) => save({ ...draft, pinkThursdayPackages })}
+              showNotification={showNotification}
+            />
 
             <div>
               <div className="flex items-center justify-between mb-3">

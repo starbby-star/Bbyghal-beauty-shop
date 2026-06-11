@@ -14,6 +14,11 @@ import {
   pinkThursdayTimeLeft,
   selloutTimeLeft,
 } from '../../utils/homePromos';
+import {
+  getPackageProducts,
+  getPackageRegularTotal,
+  getPackageSavings,
+} from '../../utils/pinkThursdayPackages';
 import ProductSlideshow from './ProductSlideshow';
 import ConnectButton from './ConnectButton';
 import PromoPrice from './PromoPrice';
@@ -44,7 +49,7 @@ export default function HomePage({
 }: HomePageProps) {
   const inStock = products.filter((p) => p.stockQuantity > 0);
   const theme = getActiveTheme(homePromoConfig);
-  const packages = getPinkThursdayPackages(homePromoConfig);
+  const packages = getPinkThursdayPackages(homePromoConfig, products);
 
   const adminSellouts = homePromoConfig.selloutProducts
     .map((promo) => products.find((p) => p.id === promo.productId))
@@ -181,29 +186,53 @@ export default function HomePage({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-8">
               <p className="text-amber-200 text-xs font-black uppercase tracking-widest mb-2">Pink Thursday</p>
-              <h3 className="text-3xl font-display font-bold">Package deals</h3>
-              <p className="text-pink-100 text-sm mt-1">Bundle & glow — limited 24 hours</p>
+              <h3 className="text-3xl font-display font-bold">3-in-1 Package offers</h3>
+              <p className="text-pink-100 text-sm mt-1">Soap + Hair + Facial & more — 3 categories, one combined Pink Thursday price</p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {packages.map((pkg) => {
-                const pkgProducts = pkg.productIds
-                  .map((id) => products.find((p) => p.id === id))
-                  .filter((p): p is Product => Boolean(p));
+                const pkgProducts = getPackageProducts(pkg, products);
+                const getPrice = (p: Product) => getEffectivePrice(p, homePromoConfig).current;
+                const regularTotal = getPackageRegularTotal(pkg, products, getPrice);
+                const savings = getPackageSavings(pkg, products, getPrice);
+
                 return (
-                  <div key={pkg.id} className="bg-black/30 backdrop-blur border border-white/20 rounded-3xl p-5">
+                  <div key={pkg.id} className="bg-black/30 backdrop-blur border border-white/20 rounded-3xl p-5 flex flex-col">
+                    <div className="inline-flex items-center gap-1 bg-amber-400/20 text-amber-200 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full w-fit mb-3">
+                      3-in-1 offer
+                    </div>
                     <h4 className="font-bold text-lg mb-3">{pkg.label}</h4>
-                    <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar">
+
+                    <div className="space-y-2 mb-4 flex-1">
                       {pkgProducts.map((p) => (
-                        <img key={p.id} src={p.imageUrl} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0" />
+                        <div key={p.id} className="flex items-center gap-2 bg-white/10 rounded-xl p-2">
+                          <img src={p.imageUrl} alt="" className="w-11 h-11 rounded-lg object-cover shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[9px] font-bold text-amber-200 uppercase">{p.category}</p>
+                            <p className="text-xs font-semibold line-clamp-1">{p.name}</p>
+                          </div>
+                          <p className="text-xs font-bold text-pink-200 shrink-0">KSh {getPrice(p).toLocaleString()}</p>
+                        </div>
                       ))}
                     </div>
-                    <p className="text-3xl font-black text-amber-300 mb-1">KSh {pkg.packagePrice.toLocaleString()}</p>
-                    <p className="text-xs text-pink-200 mb-4">{pkg.productIds.length} products in this package</p>
+
+                    {regularTotal > 0 && (
+                      <p className="text-xs text-pink-200/80 line-through mb-0.5">
+                        Was KSh {regularTotal.toLocaleString()} separately
+                      </p>
+                    )}
+                    <p className="text-3xl font-black text-amber-300 mb-1">
+                      KSh {pkg.packagePrice.toLocaleString()}
+                    </p>
+                    {savings > 0 && (
+                      <p className="text-xs text-emerald-300 font-bold mb-3">Save KSh {savings.toLocaleString()}!</p>
+                    )}
+                    <p className="text-[10px] text-pink-200/70 mb-4">3 products · different categories · sold together</p>
                     <button
-                      onClick={() => onAddPackage?.(pkg.productIds)}
-                      className="w-full py-3 bg-white text-pink-600 rounded-2xl font-bold hover:bg-amber-100 transition-colors"
+                      onClick={() => onAddPackage?.(pkg.productIds.filter(Boolean))}
+                      className="w-full py-3 bg-white text-pink-600 rounded-2xl font-bold hover:bg-amber-100 transition-colors mt-auto"
                     >
-                      Add package to bag
+                      Add full package to bag
                     </button>
                   </div>
                 );

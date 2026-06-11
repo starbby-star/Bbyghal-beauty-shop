@@ -7,6 +7,7 @@ import {
   Product,
   PromoProductPrice,
 } from '../types';
+import { getValidPinkThursdayPackages } from './pinkThursdayPackages';
 
 const STORAGE_KEY = 'blumera_home_promos';
 const PINK_THURSDAY_MS = 24 * 60 * 60 * 1000;
@@ -212,9 +213,12 @@ export function getEffectivePrice(product: Product, config: HomePromoConfig): Ef
   return { current: product.sellingPrice };
 }
 
-export function getPinkThursdayPackages(config: HomePromoConfig): PinkThursdayPackage[] {
+export function getPinkThursdayPackages(
+  config: HomePromoConfig,
+  products: Product[] = []
+): PinkThursdayPackage[] {
   if (getActiveTheme(config) !== 'pink-thursday') return [];
-  return config.pinkThursdayPackages;
+  return getValidPinkThursdayPackages(config.pinkThursdayPackages, products);
 }
 
 export function getActiveGlowTip(config: HomePromoConfig): GlowTip | null {
@@ -254,7 +258,7 @@ export function cartUsesPromoPricing(
     for (const pkg of config.pinkThursdayPackages) {
       const cartIds = cart.map((c) => c.product.id);
       const hasAll = pkg.productIds.every((id) => cartIds.includes(id));
-      if (!hasAll || pkg.productIds.length < 2) continue;
+      if (!hasAll || pkg.productIds.length !== 3) continue;
 
       const regularTotal = pkg.productIds.reduce((sum, id) => {
         const item = cart.find((c) => c.product.id === id);
