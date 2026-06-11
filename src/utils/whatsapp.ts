@@ -66,6 +66,7 @@ export function buildWhatsAppOrderMessage(input: WhatsAppOrderInput): string {
   }
   msg += `*Total: KSh ${input.total.toLocaleString()}*\n`;
   msg += `Payment: ${input.paymentMethod}\n\n`;
+  msg += `📎 *PDF receipt* has been generated — please attach it to this chat.\n\n`;
   msg += `💬 _Sent from ${BRAND.systemName} web shop. Ready to confirm, negotiate price/delivery, and arrange M-Pesa payment._`;
 
   return msg;

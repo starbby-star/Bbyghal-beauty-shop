@@ -26,8 +26,8 @@ import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  MessageCircle,
   Clock,
+  UserRound,
   CheckCircle2,
   ChevronLeft,
   Key,
@@ -41,6 +41,8 @@ import { CATEGORIES, THEME } from './constants';
 import { BRAND } from './constants/brand';
 import { Product, Category, Role, Sale, PaymentMethod, Seller, PaymentStatus, CartItem, RequestedProduct, WhatsAppCheckoutDetails } from './types';
 import { openCustomerWhatsApp } from './utils/whatsapp';
+import WhatsAppIcon from './components/storefront/WhatsAppIcon';
+import { getAllMembers } from './utils/members';
 import Storefront from './Storefront';
 import InventoryPanel from './components/InventoryPanel';
 import BraidsPanel from './components/BraidsPanel';
@@ -2370,7 +2372,7 @@ export default function App() {
         amountPaid: isWhatsAppOrder ? 0 : totalPrice,
         debtAmount: isWhatsAppOrder ? totalPrice : 0,
         staffId: 'online',
-        staffName: 'WhatsApp Web Order',
+        staffName: 'Web Order',
         sellerName: 'Online',
         customerName: (whatsappDetails?.customerName ?? checkoutCustomerName).trim() || undefined,
         customerPhone: (whatsappDetails?.customerPhone ?? checkoutCustomerPhone).trim() || undefined,
@@ -2392,7 +2394,7 @@ export default function App() {
     setCheckoutCustomerPhone('');
     showNotification(
       isWhatsAppOrder
-        ? `Order ${whatsappDetails!.orderNumber} sent to WhatsApp ${BRAND.whatsappDisplay}!`
+        ? `Order ${whatsappDetails!.orderNumber} sent via Connect to ${BRAND.whatsappDisplay}!`
         : 'Order placed successfully!',
       'success'
     );
@@ -2749,6 +2751,7 @@ export default function App() {
     sellers: 'Sellers',
     reports: 'Profit Reports',
     sales: 'Sales History',
+    members: 'Members',
   };
 
   const NavItem = ({ id, icon: Icon, label }: { id: string; icon: React.ComponentType<{ size?: number }>; label: string }) => (
@@ -3056,6 +3059,7 @@ export default function App() {
             <>
               <NavSection title="Management" />
               <NavItem id="inventory" icon={Package} label="Inventory" />
+              <NavItem id="members" icon={UserRound} label="Members" />
               <NavItem id="sellers" icon={Users} label="Sellers" />
               <NavSection title="Reports" />
               <NavItem id="summary" icon={TrendingUp} label="Sales Summary" />
@@ -3939,7 +3943,9 @@ export default function App() {
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <p className="text-xs font-bold text-gray-700">{sale.customerName}</p>
                                   {sale.orderChannel === 'whatsapp' && (
-                                    <span className="text-[8px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase">WhatsApp</span>
+                                    <span className="text-[8px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase inline-flex items-center gap-0.5">
+                                      <WhatsAppIcon size={10} /> Connect
+                                    </span>
                                   )}
                                   {sale.paymentStatus === 'Debt' && (
                                     <span className="text-[8px] font-black bg-red-100 text-red-600 px-1.5 py-0.5 rounded uppercase">Debt Owner</span>
@@ -3972,7 +3978,7 @@ export default function App() {
                           <td className="px-6 py-4">
                             {sale.orderChannel === 'whatsapp' && sale.negotiationStatus === 'Pending' ? (
                               <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-amber-100 text-amber-700">
-                                Awaiting WA
+                                Awaiting Connect
                               </span>
                             ) : sale.paymentStatus !== 'Paid' ? (
                               <button
@@ -4018,7 +4024,7 @@ export default function App() {
                                   }
                                   className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
                                 >
-                                  <MessageCircle size={12} /> Chat
+                                  <WhatsAppIcon size={12} /> Connect
                                 </button>
                               )}
                               {sale.orderNumber && sale.negotiationStatus === 'Pending' && (
@@ -4186,6 +4192,75 @@ export default function App() {
               </motion.div>
             )}
 
+            {activeTab === 'members' && role === 'admin' && (
+              <motion.div
+                key="members"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-pink-100">
+                  <h3 className="font-bold text-gray-800 mb-2">Web Members</h3>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Customers who placed orders via Connect checkout are saved automatically with their name and phone.
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-pink-50/50 text-[10px] font-bold uppercase text-gray-400 tracking-wider">
+                        <tr>
+                          <th className="px-6 py-4">Name</th>
+                          <th className="px-6 py-4">Phone</th>
+                          <th className="px-6 py-4">Location</th>
+                          <th className="px-6 py-4">Orders</th>
+                          <th className="px-6 py-4">Last Order</th>
+                          <th className="px-6 py-4">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-pink-50">
+                        {getAllMembers()
+                          .sort((a, b) => b.lastOrderAt.localeCompare(a.lastOrderAt))
+                          .map((member) => (
+                            <tr key={member.id} className="hover:bg-pink-50/30 transition-colors">
+                              <td className="px-6 py-4 text-sm font-bold text-gray-700">{member.name}</td>
+                              <td className="px-6 py-4 text-sm text-gray-500">{member.phone}</td>
+                              <td className="px-6 py-4 text-sm text-gray-500">{member.location || '—'}</td>
+                              <td className="px-6 py-4 text-sm font-semibold">{member.orderCount}</td>
+                              <td className="px-6 py-4 text-xs text-gray-400">
+                                {new Date(member.lastOrderAt).toLocaleDateString()}
+                                {member.lastOrderNumber && (
+                                  <p className="text-[10px] font-mono mt-0.5">{member.lastOrderNumber}</p>
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                                <button
+                                  onClick={() =>
+                                    openCustomerWhatsApp(
+                                      member.phone,
+                                      `Hi ${member.name.split(' ')[0]}, welcome back to ${BRAND.systemName}!`
+                                    )
+                                  }
+                                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                                >
+                                  <WhatsAppIcon size={12} /> Connect
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        {getAllMembers().length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">
+                              No members yet — they appear after the first Connect checkout.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === 'sellers' && role === 'admin' && (
               <motion.div
                 key="sellers"
@@ -4267,9 +4342,9 @@ export default function App() {
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all"
-                                          title="WhatsApp"
+                                          title="Connect"
                                         >
-                                          <MessageCircle size={16} />
+                                          <WhatsAppIcon size={16} />
                                         </a>
                                       )}
                                       <button
@@ -4698,7 +4773,7 @@ export default function App() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">WhatsApp Number</label>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Connect Number</label>
                       <input
                         type="text"
                         value={sellerFormData.whatsappNumber}

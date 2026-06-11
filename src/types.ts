@@ -120,3 +120,14 @@ export interface CartItem {
   product: Product;
   quantity: number;
 }
+
+export interface Member {
+  id: string;
+  name: string;
+  phone: string;
+  location?: string;
+  orderCount: number;
+  lastOrderAt: string;
+  lastOrderNumber?: string;
+  joinedAt: string;
+}
