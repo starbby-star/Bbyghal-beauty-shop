@@ -8,4 +8,6 @@ export const BRAND = {
   tagline: '#Glow and Grow',
   shopName: 'Bbyghal beauty shop',
   whatsappGreeting: 'Hello Bbyghal!',
+  whatsappDisplay: '0752520441',
+  whatsappIntl: '254752520441',
 } as const;

@@ -6,6 +6,8 @@
 export type Role = 'admin' | 'staff';
 export type PaymentMethod = 'Cash' | 'Mpesa';
 export type PaymentStatus = 'Paid' | 'Deposit' | 'Debt';
+export type OrderChannel = 'whatsapp' | 'pos';
+export type NegotiationStatus = 'Pending' | 'Confirmed' | 'Cancelled';
 
 export interface Profile {
   id: string;
@@ -97,6 +99,21 @@ export interface Sale {
   discount?: number;
   createdAt: string;
   clearedAt?: string;
+  /** Shared across items in one web checkout */
+  orderNumber?: string;
+  orderChannel?: OrderChannel;
+  negotiationStatus?: NegotiationStatus;
+  deliveryLocation?: string;
+  deliveryDate?: string;
+}
+
+export interface WhatsAppCheckoutDetails {
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  location: string;
+  deliveryDate: string;
+  paymentMethod: PaymentMethod;
 }
 
 export interface CartItem {

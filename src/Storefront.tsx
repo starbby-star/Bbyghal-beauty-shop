@@ -9,6 +9,8 @@ import { CATEGORIES } from './constants';
 import { BRAND } from './constants/brand';
 import BraidsShopSection from './components/BraidsShopSection';
 import { getBraidStyle } from './utils/braidFilters';
+import { generateOrderNumber, openWhatsAppOrder } from './utils/whatsapp';
+import { WhatsAppCheckoutDetails } from './types';
 
 const LogoImage = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
   const [error, setError] = React.useState(false);
@@ -42,7 +44,7 @@ interface StorefrontProps {
   setCheckoutCustomerPhone: (phone: string) => void;
   checkoutPaymentMethod: PaymentMethod;
   setCheckoutPaymentMethod: (method: PaymentMethod) => void;
-  handleCheckout: () => void;
+  handleCheckout: (details?: WhatsAppCheckoutDetails) => void;
   onAdminLoginClick: () => void;
 }
 
@@ -98,22 +100,36 @@ export default function Storefront({
   const featuredProducts = products.filter((p) => p.stockQuantity > 0).slice(0, 4);
 
   const processWhatsAppCheckout = () => {
-    if (!checkoutCustomerName || !checkoutCustomerPhone || !location || !deliveryDate) {
+    if (!checkoutCustomerName?.trim() || !checkoutCustomerPhone?.trim() || !location?.trim() || !deliveryDate) {
       alert('Please fill in all checkout details (Name, Phone, Location, Delivery Date)');
       return;
     }
-    const orderNumber = `BB-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    let orderText = `${BRAND.whatsappGreeting} 💖 I'd like to place an order:\n\n`;
-    orderText += `*Order Number:* ${orderNumber}\n*Name:* ${checkoutCustomerName}\n*Phone:* ${checkoutCustomerPhone}\n`;
-    orderText += `*Location:* ${location}\n*Delivery Date:* ${deliveryDate}\n\n*Order Details:*\n`;
-    cart.forEach((item) => {
-      orderText += `- ${item.quantity}x ${item.product.name} (KSh ${item.product.sellingPrice * item.quantity})\n`;
+    if (cart.length === 0) return;
+
+    const orderNumber = generateOrderNumber();
+    const details: WhatsAppCheckoutDetails = {
+      orderNumber,
+      customerName: checkoutCustomerName.trim(),
+      customerPhone: checkoutCustomerPhone.trim(),
+      location: location.trim(),
+      deliveryDate,
+      paymentMethod: checkoutPaymentMethod,
+    };
+
+    openWhatsAppOrder({
+      orderNumber,
+      customerName: details.customerName,
+      customerPhone: details.customerPhone,
+      location: details.location,
+      deliveryDate: details.deliveryDate,
+      paymentMethod: details.paymentMethod,
+      cart,
+      subtotal: cartSubtotal,
+      discount: cartDiscount,
+      total: cartTotal,
     });
-    orderText += `\n*Subtotal:* KSh ${cartSubtotal}\n`;
-    if (cartDiscount > 0) orderText += `*Surprise Discount:* -KSh ${cartDiscount}\n`;
-    orderText += `*Total:* KSh ${cartTotal}\n*Payment Method:* ${checkoutPaymentMethod}\n`;
-    window.open(`https://wa.me/254752520441?text=${encodeURIComponent(orderText)}`, '_blank');
-    handleCheckout();
+
+    handleCheckout(details);
   };
 
   const scrollToShop = () => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
@@ -198,12 +214,12 @@ export default function Storefront({
                   Shop Now <ArrowRight size={18} />
                 </button>
                 <a
-                  href="https://wa.me/254752520441"
+                  href={`https://wa.me/${BRAND.whatsappIntl}`}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 bg-white text-black px-7 py-3.5 rounded-full font-bold hover:bg-gray-100 transition-all"
                 >
-                  <MessageCircle size={18} /> WhatsApp
+                  <MessageCircle size={18} /> {BRAND.whatsappDisplay}
                 </a>
               </div>
             </motion.div>
@@ -365,19 +381,19 @@ export default function Storefront({
             <ul className="space-y-3 text-sm text-gray-600">
               <li className="flex items-center gap-3"><MapPin className="text-rose-500 shrink-0" size={18} /> Mururui, Kenya</li>
               <li className="flex items-center gap-3"><Truck className="text-rose-500 shrink-0" size={18} /> Countrywide deliveries</li>
-              <li className="flex items-center gap-3"><Phone className="text-rose-500 shrink-0" size={18} /> <strong>0752520441</strong></li>
+              <li className="flex items-center gap-3"><Phone className="text-rose-500 shrink-0" size={18} /> <strong>{BRAND.whatsappDisplay}</strong></li>
             </ul>
           </div>
           <div id="contact" className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 text-white shadow-xl scroll-mt-24">
             <h3 className="text-2xl font-display font-bold mb-3">Get in touch</h3>
             <p className="text-gray-300 text-sm mb-6">Order via WhatsApp for the fastest response. M-Pesa accepted.</p>
             <a
-              href="https://wa.me/254752520441"
+              href={`https://wa.me/${BRAND.whatsappIntl}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-3 rounded-full font-bold transition-colors"
             >
-              <MessageCircle size={20} /> Chat on WhatsApp
+              <MessageCircle size={20} /> WhatsApp {BRAND.whatsappDisplay}
             </a>
           </div>
         </div>
@@ -497,7 +513,19 @@ export default function Storefront({
                       </div>
                     ))}
 
-                    <div className="bg-white border border-pink-100 rounded-2xl p-4 space-y-3 mt-6">
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-4">
+                      <div className="flex items-start gap-3">
+                        <MessageCircle className="text-emerald-600 shrink-0 mt-0.5" size={20} />
+                        <div>
+                          <p className="text-sm font-bold text-emerald-800">Checkout via WhatsApp</p>
+                          <p className="text-xs text-emerald-700 mt-1 leading-relaxed">
+                            Your order is sent directly to <strong>{BRAND.whatsappDisplay}</strong> for confirmation, negotiation, and delivery tracking.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-pink-100 rounded-2xl p-4 space-y-3">
                       <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Delivery details</p>
                       {[
                         { label: 'Name', value: checkoutCustomerName, set: setCheckoutCustomerName, type: 'text', placeholder: 'Jane Doe' },
@@ -535,8 +563,11 @@ export default function Storefront({
                   </div>
                   <button onClick={processWhatsAppCheckout}
                     className="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20">
-                    <MessageCircle size={20} /> Order via WhatsApp
+                    <MessageCircle size={20} /> Send order to {BRAND.whatsappDisplay}
                   </button>
+                  <p className="text-[10px] text-center text-gray-400 mt-2">
+                    Opens WhatsApp with your full order — tap Send to confirm with the shop
+                  </p>
                 </div>
               )}
             </motion.div>

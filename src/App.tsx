@@ -39,7 +39,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { CATEGORIES, THEME } from './constants';
 import { BRAND } from './constants/brand';
-import { Product, Category, Role, Sale, PaymentMethod, Seller, PaymentStatus, CartItem, RequestedProduct } from './types';
+import { Product, Category, Role, Sale, PaymentMethod, Seller, PaymentStatus, CartItem, RequestedProduct, WhatsAppCheckoutDetails } from './types';
+import { openCustomerWhatsApp } from './utils/whatsapp';
 import Storefront from './Storefront';
 import InventoryPanel from './components/InventoryPanel';
 import BraidsPanel from './components/BraidsPanel';
@@ -2330,10 +2331,11 @@ export default function App() {
   const cartDiscount = cartTotalItems >= 3 ? 20 : (cartTotalItems >= 2 ? 10 : 0);
   const cartTotal = cartSubtotal - cartDiscount;
 
-  const handleCheckout = () => {
+  const handleCheckout = (whatsappDetails?: WhatsAppCheckoutDetails) => {
     if (cart.length === 0) return;
 
     let updatedProducts = [...products];
+    const isWhatsAppOrder = Boolean(whatsappDetails);
 
     const newSales: Sale[] = cart.map((item, index) => {
       const isFirstItem = index === 0;
@@ -2363,17 +2365,22 @@ export default function App() {
         sellingPrice: item.product.sellingPrice,
         buyingPrice: fifo.consumedBuyingPrice,
         profit: totalProfit,
-        paymentMethod: checkoutPaymentMethod,
-        paymentStatus: 'Paid' as PaymentStatus,
-        amountPaid: totalPrice,
-        debtAmount: 0,
+        paymentMethod: whatsappDetails?.paymentMethod ?? checkoutPaymentMethod,
+        paymentStatus: (isWhatsAppOrder ? 'Deposit' : 'Paid') as PaymentStatus,
+        amountPaid: isWhatsAppOrder ? 0 : totalPrice,
+        debtAmount: isWhatsAppOrder ? totalPrice : 0,
         staffId: 'online',
-        staffName: 'Online Order',
+        staffName: 'WhatsApp Web Order',
         sellerName: 'Online',
-        customerName: checkoutCustomerName.trim() || undefined,
-        customerPhone: checkoutCustomerPhone.trim() || undefined,
+        customerName: (whatsappDetails?.customerName ?? checkoutCustomerName).trim() || undefined,
+        customerPhone: (whatsappDetails?.customerPhone ?? checkoutCustomerPhone).trim() || undefined,
         discount: itemDiscount > 0 ? itemDiscount : undefined,
         createdAt: new Date().toISOString(),
+        orderNumber: whatsappDetails?.orderNumber,
+        orderChannel: isWhatsAppOrder ? 'whatsapp' : undefined,
+        negotiationStatus: isWhatsAppOrder ? 'Pending' : undefined,
+        deliveryLocation: whatsappDetails?.location,
+        deliveryDate: whatsappDetails?.deliveryDate,
       };
     });
 
@@ -2383,7 +2390,30 @@ export default function App() {
     setIsCartOpen(false);
     setCheckoutCustomerName('');
     setCheckoutCustomerPhone('');
-    showNotification('Order placed successfully!', 'success');
+    showNotification(
+      isWhatsAppOrder
+        ? `Order ${whatsappDetails!.orderNumber} sent to WhatsApp ${BRAND.whatsappDisplay}!`
+        : 'Order placed successfully!',
+      'success'
+    );
+  };
+
+  const handleConfirmWhatsAppOrder = (orderNumber: string) => {
+    setSales(
+      sales.map((s) =>
+        s.orderNumber === orderNumber
+          ? {
+              ...s,
+              negotiationStatus: 'Confirmed',
+              paymentStatus: 'Paid',
+              amountPaid: s.sellingPrice * s.quantity - (s.discount || 0),
+              debtAmount: 0,
+              clearedAt: new Date().toISOString(),
+            }
+          : s
+      )
+    );
+    showNotification(`Order ${orderNumber} confirmed`, 'success');
   };
 
   const visibleSales = useMemo(() => {
@@ -3906,13 +3936,19 @@ export default function App() {
                           <td className="px-6 py-4">
                             {sale.customerName ? (
                               <>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <p className="text-xs font-bold text-gray-700">{sale.customerName}</p>
+                                  {sale.orderChannel === 'whatsapp' && (
+                                    <span className="text-[8px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase">WhatsApp</span>
+                                  )}
                                   {sale.paymentStatus === 'Debt' && (
                                     <span className="text-[8px] font-black bg-red-100 text-red-600 px-1.5 py-0.5 rounded uppercase">Debt Owner</span>
                                   )}
                                 </div>
                                 {sale.customerPhone && <p className="text-[10px] text-gray-400">{sale.customerPhone}</p>}
+                                {sale.deliveryLocation && (
+                                  <p className="text-[10px] text-gray-400">{sale.deliveryLocation}</p>
+                                )}
                               </>
                             ) : (
                               <span className="text-xs text-gray-400">-</span>
@@ -3921,6 +3957,9 @@ export default function App() {
                           <td className="px-6 py-4">
                             <p className="text-sm font-bold text-gray-700">{sale.productName}</p>
                             <p className="text-[10px] text-pink-400 font-bold uppercase">{sale.brand}</p>
+                            {sale.orderNumber && (
+                              <p className="text-[10px] text-gray-400 font-mono mt-0.5">{sale.orderNumber}</p>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-sm font-semibold">{sale.quantity}</td>
                           <td className="px-6 py-4 text-sm font-bold text-pink-600">KSh {sale.sellingPrice * sale.quantity}</td>
@@ -3931,7 +3970,11 @@ export default function App() {
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            {sale.paymentStatus !== 'Paid' ? (
+                            {sale.orderChannel === 'whatsapp' && sale.negotiationStatus === 'Pending' ? (
+                              <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-amber-100 text-amber-700">
+                                Awaiting WA
+                              </span>
+                            ) : sale.paymentStatus !== 'Paid' ? (
                               <button
                                 onClick={() => handleClearDebt(sale.id)}
                                 className={`text-[10px] font-bold px-2 py-1 rounded-lg uppercase transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm hover:shadow-md ${getStatusColor(sale.paymentStatus)} bg-white border border-current hover:bg-emerald-50`}
@@ -3944,7 +3987,10 @@ export default function App() {
                                 {sale.paymentStatus}
                               </span>
                             )}
-                            {sale.paymentStatus === 'Deposit' && (
+                            {sale.negotiationStatus === 'Confirmed' && (
+                              <p className="text-[10px] text-emerald-600 mt-1 font-bold">Confirmed</p>
+                            )}
+                            {sale.paymentStatus === 'Deposit' && sale.orderChannel !== 'whatsapp' && (
                               <p className="text-[10px] text-gray-400 mt-1">Paid: KSh {sale.amountPaid}</p>
                             )}
                           </td>
@@ -3961,12 +4007,35 @@ export default function App() {
                             <td className="px-6 py-4 text-sm font-bold text-emerald-500">+KSh {sale.profit}</td>
                           )}
                           <td className="px-6 py-4">
-                            <button
-                              onClick={() => setReceiptSale(sale)}
-                              className="text-xs font-bold text-pink-500 hover:text-pink-600 underline"
-                            >
-                              Receipt
-                            </button>
+                            <div className="flex flex-col gap-1">
+                              {sale.orderChannel === 'whatsapp' && sale.customerPhone && (
+                                <button
+                                  onClick={() =>
+                                    openCustomerWhatsApp(
+                                      sale.customerPhone!,
+                                      `Hi ${sale.customerName || 'there'}, regarding your order ${sale.orderNumber || ''} from ${BRAND.shopName}...`
+                                    )
+                                  }
+                                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                                >
+                                  <MessageCircle size={12} /> Chat
+                                </button>
+                              )}
+                              {sale.orderNumber && sale.negotiationStatus === 'Pending' && (
+                                <button
+                                  onClick={() => handleConfirmWhatsAppOrder(sale.orderNumber!)}
+                                  className="text-xs font-bold text-pink-600 hover:text-pink-700 underline"
+                                >
+                                  Confirm order
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setReceiptSale(sale)}
+                                className="text-xs font-bold text-pink-500 hover:text-pink-600 underline text-left"
+                              >
+                                Receipt
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
