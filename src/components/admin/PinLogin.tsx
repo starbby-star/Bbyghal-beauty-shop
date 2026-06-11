@@ -7,7 +7,6 @@ import {
   verifyStaffPin,
   authConfigured,
 } from '../../utils/auth';
-import { SUPABASE_API_SETTINGS_URL } from '../../constants/supabase';
 import { Role } from '../../types';
 
 const PIN_MIN = 6;
@@ -63,15 +62,10 @@ export default function PinLogin({ onSuccess, onError }: PinLoginProps) {
   if (!authConfigured()) {
     return (
       <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-900">
-        <p className="font-bold mb-2">Add your Supabase anon key</p>
+        <p className="font-bold mb-2">Staff sign-in unavailable</p>
         <p className="text-amber-800">
-          Project URL is set (<code className="text-xs">deiycrewvqvbgisrbglu</code>). Copy the{' '}
-          <strong>anon public</strong> key from{' '}
-          <a href={SUPABASE_API_SETTINGS_URL} target="_blank" rel="noreferrer" className="underline">
-            API settings
-          </a>
-          , set <code className="text-xs">VITE_SUPABASE_ANON_KEY</code>, then run migrations{' '}
-          <code className="text-xs">001</code> and <code className="text-xs">002</code> in the SQL editor.
+          Supabase is not configured. Set <code className="text-xs">VITE_SUPABASE_URL</code> and{' '}
+          <code className="text-xs">VITE_SUPABASE_ANON_KEY</code>, then rebuild the app.
         </p>
       </div>
     );

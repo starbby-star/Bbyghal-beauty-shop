@@ -24,7 +24,7 @@ Staff login uses **Supabase RPC** with bcrypt-hashed PINs (never in the frontend
 - **API URL:** `https://deiycrewvqvbgisrbglu.supabase.co`
 - **API keys:** https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu/settings/api
 
-Set `VITE_SUPABASE_ANON_KEY` in GitHub secrets or local `.env`.
+The app ships with the BLUMERA project URL and anon key as defaults. Override with `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` in `.env` or deploy settings if needed.
 
 ## Migrations (run in order)
 
@@ -64,8 +64,8 @@ PINs are set via migration 002 or `npm run seed:pins` — **never commit real PI
 
 | Variable | Required |
 |----------|----------|
-| `VITE_SUPABASE_URL` | Yes |
-| `VITE_SUPABASE_ANON_KEY` | Yes |
+| `VITE_SUPABASE_URL` | Optional (default: BLUMERA project) |
+| `VITE_SUPABASE_ANON_KEY` | Optional (default: BLUMERA anon key) |
 | `SUPABASE_SERVICE_ROLE_KEY` | PIN rotation only |
 
 ## Rotate PINs
