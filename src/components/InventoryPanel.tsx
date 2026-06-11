@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, Filter, AlertTriangle, TrendingUp, ShoppingCart, X, Search,
@@ -14,6 +14,8 @@ import {
   applyStockAddition,
   createProductWithBatch,
 } from '../utils/inventory';
+import BraidFilters, { BraidDetailFields } from './BraidFilters';
+import { BraidFilterState, emptyBraidFilters, filterBraidProducts, getBraidStyle } from '../utils/braidFilters';
 
 interface InventoryPanelProps {
   products: Product[];
@@ -37,8 +39,13 @@ const emptyProductForm = () => ({
   bestUsedWhen: '',
   bestUsedWith: '',
   resultsAfter: '',
-  braidType: '',
+  braidStyle: '',
+  braidLength: '',
   colorNumber: '',
+  brandSelect: '',
+  styleSelect: '',
+  customBrand: '',
+  customStyle: '',
 });
 
 export default function InventoryPanel({
@@ -63,23 +70,34 @@ export default function InventoryPanel({
     dateAdded: new Date().toISOString().split('T')[0],
   });
   const [addOnSearchQuery, setAddOnSearchQuery] = useState('');
+  const [braidFilters, setBraidFilters] = useState<BraidFilterState>(emptyBraidFilters);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addedBy = role === 'admin' ? 'Admin' : (activeEmployee || 'Staff');
 
-  const filteredProducts = products
-    .filter(
-      (p) =>
-        (inventoryCategory === 'All' || p.category === inventoryCategory) &&
-        (!showLowStockOnly || p.stockQuantity <= LOW_STOCK_THRESHOLD) &&
-        (!showHighStockOnly || p.stockQuantity >= HIGH_STOCK_THRESHOLD)
-    )
-    .sort((a, b) => {
+  const baseFiltered = useMemo(
+    () =>
+      products.filter(
+        (p) =>
+          (inventoryCategory === 'All' || p.category === inventoryCategory) &&
+          (!showLowStockOnly || p.stockQuantity <= LOW_STOCK_THRESHOLD) &&
+          (!showHighStockOnly || p.stockQuantity >= HIGH_STOCK_THRESHOLD)
+      ),
+    [products, inventoryCategory, showLowStockOnly, showHighStockOnly]
+  );
+
+  const filteredProducts = useMemo(() => {
+    const list =
+      inventoryCategory === 'Braids'
+        ? filterBraidProducts(baseFiltered, braidFilters)
+        : baseFiltered;
+    return [...list].sort((a, b) => {
       const dateA = a.createdAt.split('T')[0];
       const dateB = b.createdAt.split('T')[0];
       if (dateA !== dateB) return dateB.localeCompare(dateA);
       return a.name.localeCompare(b.name);
     });
+  }, [baseFiltered, inventoryCategory, braidFilters]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -118,7 +136,9 @@ export default function InventoryPanel({
       bestUsedWhen: newProductData.bestUsedWhen || undefined,
       bestUsedWith: newProductData.bestUsedWith || undefined,
       resultsAfter: newProductData.resultsAfter || undefined,
-      braidType: newProductData.category === 'Braids' ? newProductData.braidType : undefined,
+      braidStyle: newProductData.category === 'Braids' ? newProductData.braidStyle : undefined,
+      braidLength: newProductData.category === 'Braids' ? newProductData.braidLength : undefined,
+      braidType: newProductData.category === 'Braids' ? newProductData.braidStyle : undefined,
       colorNumber: newProductData.category === 'Braids' ? newProductData.colorNumber : undefined,
     };
 
@@ -282,6 +302,10 @@ export default function InventoryPanel({
         <span className="text-xs text-gray-400 ml-auto">{filteredProducts.length} products</span>
       </div>
 
+      {inventoryCategory === 'Braids' && (
+        <BraidFilters filters={braidFilters} onChange={setBraidFilters} resultCount={filteredProducts.length} compact />
+      )}
+
       {/* Product list */}
       <div className="space-y-3">
         {filteredProducts.map((product) => {
@@ -309,6 +333,12 @@ export default function InventoryPanel({
                       <span className="text-[10px] bg-pink-50 text-pink-600 px-2 py-0.5 rounded-full font-medium">
                         {product.category}
                       </span>
+                      {product.category === 'Braids' && getBraidStyle(product) && (
+                        <span className="text-[10px] text-pink-500 font-medium">{getBraidStyle(product)}</span>
+                      )}
+                      {product.colorNumber && (
+                        <span className="text-[10px] text-amber-600 font-medium">#{product.colorNumber}</span>
+                      )}
                       {oldestBatch && product.stockQuantity > 0 && (
                         <span className="text-[10px] text-gray-500 flex items-center gap-1">
                           <Calendar size={10} />
@@ -437,14 +467,16 @@ export default function InventoryPanel({
                   placeholder="e.g. Dr Rashel Vitamin C Serum"
                 />
               </Field>
-              <Field label="Brand">
-                <input
-                  type="text"
-                  value={newProductData.brand}
-                  onChange={(e) => setNewProductData({ ...newProductData, brand: e.target.value })}
-                  className={inputClass}
-                />
-              </Field>
+              {newProductData.category !== 'Braids' && (
+                <Field label="Brand">
+                  <input
+                    type="text"
+                    value={newProductData.brand}
+                    onChange={(e) => setNewProductData({ ...newProductData, brand: e.target.value })}
+                    className={inputClass}
+                  />
+                </Field>
+              )}
 
               <div className="grid grid-cols-3 gap-3">
                 <Field label="Quantity">
@@ -477,26 +509,25 @@ export default function InventoryPanel({
               </div>
 
               {newProductData.category === 'Braids' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Braid Type">
-                    <input
-                      type="text"
-                      value={newProductData.braidType}
-                      onChange={(e) => setNewProductData({ ...newProductData, braidType: e.target.value })}
-                      className={inputClass}
-                      placeholder="Jibambe, Havana Curl..."
-                    />
-                  </Field>
-                  <Field label="Color Number">
-                    <input
-                      type="text"
-                      value={newProductData.colorNumber}
-                      onChange={(e) => setNewProductData({ ...newProductData, colorNumber: e.target.value })}
-                      className={inputClass}
-                      placeholder="1, 33, 1/33..."
-                    />
-                  </Field>
-                </div>
+                <BraidDetailFields
+                  brand={newProductData.brand}
+                  setBrand={(v) => setNewProductData({ ...newProductData, brand: v })}
+                  braidStyle={newProductData.braidStyle}
+                  setBraidStyle={(v) => setNewProductData({ ...newProductData, braidStyle: v })}
+                  braidLength={newProductData.braidLength}
+                  setBraidLength={(v) => setNewProductData({ ...newProductData, braidLength: v })}
+                  colorNumber={newProductData.colorNumber}
+                  setColorNumber={(v) => setNewProductData({ ...newProductData, colorNumber: v })}
+                  customBrand={newProductData.customBrand}
+                  setCustomBrand={(v) => setNewProductData({ ...newProductData, customBrand: v })}
+                  customStyle={newProductData.customStyle}
+                  setCustomStyle={(v) => setNewProductData({ ...newProductData, customStyle: v })}
+                  brandSelect={newProductData.brandSelect}
+                  setBrandSelect={(v) => setNewProductData({ ...newProductData, brandSelect: v })}
+                  styleSelect={newProductData.styleSelect}
+                  setStyleSelect={(v) => setNewProductData({ ...newProductData, styleSelect: v })}
+                  inputClass={inputClass}
+                />
               )}
 
               <Field label="Product Photo">

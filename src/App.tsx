@@ -33,14 +33,18 @@ import {
   Key,
   Zap,
   ClipboardList,
-  Edit2
+  Edit2,
+  Scissors
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CATEGORIES, THEME } from './constants';
 import { Product, Category, Role, Sale, PaymentMethod, Seller, PaymentStatus, CartItem, RequestedProduct } from './types';
 import Storefront from './Storefront';
 import InventoryPanel from './components/InventoryPanel';
+import BraidsPanel from './components/BraidsPanel';
+import BraidFilters from './components/BraidFilters';
 import { deductStockFIFO, LOW_STOCK_THRESHOLD, HIGH_STOCK_THRESHOLD } from './utils/inventory';
+import { BraidFilterState, emptyBraidFilters, filterBraidProducts, getBraidStyle } from './utils/braidFilters';
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Mock Data
@@ -2032,7 +2036,9 @@ const MOCK_PRODUCTS: Product[] = [
     isFixedPrice: true,
     imageUrl: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&h=400&fit=crop',
     createdAt: new Date().toISOString(),
-    braidType: 'Jibambe',
+    braidStyle: 'Knotless',
+    braidLength: 'Long',
+    braidType: 'Knotless',
     colorNumber: '1',
     bestUsedBy: 'Protective styling, knotless braids',
     resultsAfter: 'Can last up to 6 weeks'
@@ -2050,7 +2056,9 @@ const MOCK_PRODUCTS: Product[] = [
     isFixedPrice: true,
     imageUrl: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&h=400&fit=crop',
     createdAt: new Date().toISOString(),
-    braidType: 'Jibambe',
+    braidStyle: 'Box Braid',
+    braidLength: 'Medium',
+    braidType: 'Box Braid',
     colorNumber: '33',
     bestUsedBy: 'Protective styling, knotless braids',
     resultsAfter: 'Can last up to 6 weeks'
@@ -2068,6 +2076,8 @@ const MOCK_PRODUCTS: Product[] = [
     isFixedPrice: true,
     imageUrl: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&h=400&fit=crop',
     createdAt: new Date().toISOString(),
+    braidStyle: 'Havana Curl',
+    braidLength: 'Long',
     braidType: 'Havana Curl',
     colorNumber: '27',
     bestUsedBy: 'Crochet styles, voluminous curls',
@@ -2221,6 +2231,7 @@ export default function App() {
   const [activeEmployee, setActiveEmployee] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('sales');
   const [selectedCategory, setSelectedCategory] = useState<Category>('All');
+  const [braidFilters, setBraidFilters] = useState<BraidFilterState>(emptyBraidFilters());
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedProductForSale, setSelectedProductForSale] = useState<Product | null>(null);
@@ -2380,21 +2391,25 @@ export default function App() {
   }, [sales, role, activeEmployee]);
 
   const filteredProducts = useMemo(() => {
-    let result = products.filter(p => {
+    if (selectedCategory === 'Braids') {
+      return filterBraidProducts(products, braidFilters);
+    }
+
+    const result = products.filter((p) => {
       const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.brand.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.brand.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
 
     return result.sort((a, b) => {
       const dateA = a.createdAt.split('T')[0];
       const dateB = b.createdAt.split('T')[0];
-      if (dateA !== dateB) {
-        return dateB.localeCompare(dateA); // Newest date first
-      }
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
       return a.name.localeCompare(b.name);
     });
-  }, [products, selectedCategory, searchQuery]);
+  }, [products, selectedCategory, searchQuery, braidFilters]);
 
   const weeklyTotals = useMemo(() => {
     const oneWeekAgo = new Date();
@@ -2960,6 +2975,7 @@ export default function App() {
 
         <nav className="flex-1 px-4 space-y-2 mt-4">
           <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" />
+          <NavItem id="braids" icon={Scissors} label="Braids" />
           {role === 'admin' && (
             <>
               <NavItem id="summary" icon={TrendingUp} label="Sales Summary" />
@@ -3322,13 +3338,16 @@ export default function App() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
                       <h3 className="text-xl font-black text-gray-800">Quick Record Sale</h3>
                       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                         {CATEGORIES.map(cat => (
                           <button
                             key={cat}
-                            onClick={() => setSelectedCategory(cat)}
+                            onClick={() => {
+                              setSelectedCategory(cat);
+                              if (cat !== 'Braids') setBraidFilters(emptyBraidFilters());
+                            }}
                             className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${selectedCategory === cat
                                 ? 'bg-pink-500 text-white shadow-md shadow-pink-200'
                                 : 'bg-white text-gray-500 border border-pink-100 hover:border-pink-300'
@@ -3339,6 +3358,15 @@ export default function App() {
                         ))}
                       </div>
                     </div>
+
+                    {selectedCategory === 'Braids' && (
+                      <BraidFilters
+                        filters={braidFilters}
+                        onChange={setBraidFilters}
+                        resultCount={filteredProducts.length}
+                        compact
+                      />
+                    )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {filteredProducts.map(product => (
@@ -3359,9 +3387,9 @@ export default function App() {
                           <h4 className="font-bold text-gray-800 text-sm line-clamp-1">{product.name}</h4>
                           <div className="flex items-center gap-2 mb-3">
                             <p className="text-[10px] text-gray-400 font-medium">{product.brand}</p>
-                            {product.braidType && (
+                            {getBraidStyle(product) && (
                               <span className="text-[8px] font-bold bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded uppercase">
-                                {product.braidType} {product.colorNumber && `(${product.colorNumber})`}
+                                {getBraidStyle(product)}{product.braidLength ? ` · ${product.braidLength}` : ''}{product.colorNumber ? ` (#${product.colorNumber})` : ''}
                               </span>
                             )}
                           </div>
@@ -3883,6 +3911,22 @@ export default function App() {
                   )}
                 </div>
               </motion.div>
+            )}
+
+            {activeTab === 'braids' && (
+              <BraidsPanel
+                products={products}
+                role={role}
+                onRecordSale={(product) => {
+                  setSelectedProductForSale(product);
+                  setAmountPaid(product.sellingPrice);
+                  setSaleQuantity(1);
+                  setPaymentStatus('Paid');
+                  setPaymentMethod(null);
+                  setDiscount(0);
+                }}
+                onAddBraid={role === 'admin' ? () => setActiveTab('inventory') : undefined}
+              />
             )}
 
             {activeTab === 'inventory' && (

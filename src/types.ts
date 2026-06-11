@@ -59,9 +59,12 @@ export interface Product {
   bestUsedWhen?: string; // At night or in day
   bestUsedWith?: string; // What you can use together with
   resultsAfter?: string; // Timeframe for results (e.g., a month, a week)
-  // New fields for braids
-  braidType?: string; // e.g., Jibambe, Havana Curl, Normal
-  colorNumber?: string; // e.g., 1, 33, 27, 1/33
+  // Braid-specific fields
+  braidStyle?: string; // Box Braid, Knotless, Locs, etc.
+  braidLength?: string; // Short, Medium, Long, Extra Long
+  /** @deprecated Use braidStyle — kept for older products */
+  braidType?: string;
+  colorNumber?: string; // e.g., 1, 33, 27, 1/900
   stockUpdates?: StockBatch[];
 }
 

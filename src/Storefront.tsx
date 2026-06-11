@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Product, CartItem, PaymentMethod, Category } from './types';
 import { CATEGORIES } from './constants';
+import BraidsShopSection from './components/BraidsShopSection';
+import { getBraidStyle } from './utils/braidFilters';
 
 const LogoImage = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
   const [error, setError] = React.useState(false);
@@ -73,8 +75,11 @@ export default function Storefront({
     );
   };
 
+  const shopCategories = CATEGORIES.filter((c) => c !== 'Braids');
+
   const filteredProducts = products
     .filter((p) => {
+      if (p.category === 'Braids') return false;
       if (showWishlist && !wishlist.includes(p.id)) return false;
       const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
       const matchesSearch =
@@ -111,6 +116,7 @@ export default function Storefront({
   };
 
   const scrollToShop = () => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBraids = () => document.getElementById('braids')?.scrollIntoView({ behavior: 'smooth' });
 
   return (
     <div className="min-h-screen storefront-gradient flex flex-col font-sans text-gray-800">
@@ -127,6 +133,7 @@ export default function Storefront({
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
             <button onClick={scrollToShop} className="hover:text-rose-600 transition-colors">Shop</button>
+            <button onClick={scrollToBraids} className="hover:text-rose-600 transition-colors">Braids</button>
             <a href="#about" className="hover:text-rose-600 transition-colors">About</a>
             <a href="#contact" className="hover:text-rose-600 transition-colors">Contact</a>
           </nav>
@@ -243,7 +250,7 @@ export default function Storefront({
             />
           </div>
           <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-            {CATEGORIES.map((category) => (
+            {shopCategories.map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
@@ -337,6 +344,14 @@ export default function Storefront({
           </div>
         )}
 
+        <BraidsShopSection
+          products={products}
+          addToCart={addToCart}
+          onProductClick={setSelectedProduct}
+          wishlist={wishlist}
+          onToggleWishlist={toggleWishlist}
+        />
+
         {/* About + Contact */}
         <div id="about" className="grid md:grid-cols-2 gap-6 mt-20 scroll-mt-24">
           <div className="bg-white rounded-3xl p-8 border border-pink-50 shadow-sm">
@@ -403,9 +418,22 @@ export default function Storefront({
                   </button>
                 </div>
                 <p className="text-3xl font-black text-gray-900 mb-4">KSh {selectedProduct.sellingPrice.toLocaleString()}</p>
-                <p className="text-sm text-gray-600 leading-relaxed mb-6">
+                <p className="text-sm text-gray-600 leading-relaxed mb-4">
                   {selectedProduct.fullDescription || selectedProduct.shortDescription || 'Premium beauty product from the Babyghal collection.'}
                 </p>
+                {selectedProduct.category === 'Braids' && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {getBraidStyle(selectedProduct) && (
+                      <span className="text-xs font-bold bg-pink-100 text-pink-600 px-3 py-1 rounded-full">{getBraidStyle(selectedProduct)}</span>
+                    )}
+                    {selectedProduct.braidLength && (
+                      <span className="text-xs font-bold bg-blue-100 text-blue-600 px-3 py-1 rounded-full">{selectedProduct.braidLength}</span>
+                    )}
+                    {selectedProduct.colorNumber && (
+                      <span className="text-xs font-bold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">Color #{selectedProduct.colorNumber}</span>
+                    )}
+                  </div>
+                )}
                 {selectedProduct.bestUsedBy && (
                   <div className="mb-3"><span className="text-xs font-bold text-gray-500 uppercase">Best for</span><p className="text-sm text-gray-700">{selectedProduct.bestUsedBy}</p></div>
                 )}
