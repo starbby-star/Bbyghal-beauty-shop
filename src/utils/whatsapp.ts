@@ -1,6 +1,6 @@
 import { CartItem, OrderServiceType, PaymentMethod } from '../types';
 import { BRAND } from '../constants/brand';
-import { getBraidStyle } from './braidFilters';
+import { DeliveryEstimate } from './delivery';
 
 /** Shop WhatsApp: 0752520441 */
 export const SHOP_WHATSAPP_INTL = '254752520441';
@@ -39,6 +39,8 @@ export interface WhatsAppOrderInput {
   lineItems: OrderLineItem[];
   subtotal: number;
   discount: number;
+  deliveryFee?: number;
+  deliveryEstimate?: DeliveryEstimate;
   total: number;
 }
 
@@ -78,8 +80,13 @@ export function buildWhatsAppOrderMessage(input: WhatsAppOrderInput): string {
     msg += `Subtotal: KSh ${input.subtotal.toLocaleString()}\n`;
     msg += `Discount: -KSh ${input.discount.toLocaleString()}\n`;
   }
-  msg += `*Total: KSh ${input.total.toLocaleString()}*\n\n`;
-  msg += `Please confirm my order, ${firstName} — ready to pay and receive. Thank you! ✨`;
+  if (input.serviceType === 'payment_delivery' && input.deliveryEstimate) {
+    const d = input.deliveryEstimate;
+    msg += `Delivery (${d.rangeLabel}): est. KSh ${d.amount.toLocaleString()} — *negotiable*\n`;
+    msg += `_${d.note}_\n`;
+  }
+  msg += `*Total (incl. est. delivery): KSh ${input.total.toLocaleString()}*\n\n`;
+  msg += `Please confirm my order and delivery fee, ${firstName} — ready to pay and receive. Thank you! ✨`;
 
   return msg;
 }
@@ -103,12 +110,19 @@ export function buildBuyerReceiptMessage(input: WhatsAppOrderInput): string {
     msg += `Subtotal: KSh ${input.subtotal.toLocaleString()}\n`;
     msg += `Discount: -KSh ${input.discount.toLocaleString()}\n`;
   }
+  if (input.serviceType === 'payment_delivery' && input.deliveryEstimate) {
+    const d = input.deliveryEstimate;
+    msg += `Delivery (${d.rangeLabel}): est. KSh ${d.amount.toLocaleString()} (negotiable)\n`;
+  }
   msg += `*Total: KSh ${input.total.toLocaleString()}*\n\n`;
   msg += `Required on: ${dateLabel}\n`;
   msg += `County: ${input.county}\n`;
   msg += `Service: ${serviceTypeLabel(input.serviceType)}\n`;
-  msg += `Payment: ${input.paymentMethod}\n\n`;
-  msg += `Pay and share your M-Pesa confirmation with ${BRAND.systemName} on ${BRAND.whatsappDisplay}.\n`;
+  msg += `Payment: ${input.paymentMethod}\n`;
+  if (input.serviceType === 'payment_delivery' && input.deliveryEstimate) {
+    msg += `\n${input.deliveryEstimate.note}\n`;
+  }
+  msg += `\nPay and share your M-Pesa confirmation with ${BRAND.systemName} on ${BRAND.whatsappDisplay}.\n`;
   msg += `Your receipt will be confirmed after payment.\n\n`;
   msg += `${BRAND.motto} — ${BRAND.shopName}`;
 

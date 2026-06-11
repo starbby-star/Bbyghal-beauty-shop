@@ -2391,7 +2391,8 @@ export default function App() {
       }
 
       const unitPrice = getEffectivePrice(item.product, homePromoConfig).current;
-      const totalPrice = unitPrice * item.quantity - itemDiscount;
+      const deliveryFee = isFirstItem && isWhatsAppOrder ? (whatsappDetails?.deliveryFee ?? 0) : 0;
+      const totalPrice = unitPrice * item.quantity - itemDiscount + deliveryFee;
       const totalProfit =
         (unitPrice - fifo.consumedBuyingPrice) * item.quantity - itemDiscount;
 
@@ -2421,6 +2422,8 @@ export default function App() {
         deliveryLocation: whatsappDetails?.county ?? whatsappDetails?.location,
         deliveryDate: whatsappDetails?.deliveryDate,
         serviceType: whatsappDetails?.serviceType,
+        deliveryFee: isFirstItem ? whatsappDetails?.deliveryFee : undefined,
+        deliveryFeeRange: isFirstItem ? whatsappDetails?.deliveryFeeRange : undefined,
       };
     });
 
@@ -3997,6 +4000,14 @@ export default function App() {
                                 {sale.customerPhone && <p className="text-[10px] text-gray-400">{sale.customerPhone}</p>}
                                 {sale.deliveryLocation && (
                                   <p className="text-[10px] text-gray-400">{sale.deliveryLocation}</p>
+                                )}
+                                {sale.serviceType && (
+                                  <p className="text-[10px] text-pink-400 font-semibold">
+                                    {sale.serviceType === 'payment_delivery' ? 'Payment + Delivery' : 'Payment only'}
+                                    {sale.deliveryFee != null && sale.deliveryFee > 0 && (
+                                      <span className="text-amber-600"> · Del. est. KSh {sale.deliveryFee}{sale.deliveryFeeRange ? ` (${sale.deliveryFeeRange})` : ''}</span>
+                                    )}
+                                  </p>
                                 )}
                               </>
                             ) : (

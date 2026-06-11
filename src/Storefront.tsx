@@ -18,6 +18,7 @@ import HomeChatbot from './components/storefront/HomeChatbot';
 import GlowTipPopup from './components/storefront/GlowTipPopup';
 import PromoPrice from './components/storefront/PromoPrice';
 import { getActiveTheme, getActiveGlowTip, getEffectivePrice } from './utils/homePromos';
+import { getDeliveryEstimate } from './utils/delivery';
 import { getBraidStyle } from './utils/braidFilters';
 import {
   generateOrderNumber,
@@ -159,6 +160,13 @@ export default function Storefront({
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.name.localeCompare(b.name));
 
+  const deliveryEstimate = React.useMemo(
+    () => (serviceType === 'payment_delivery' && county ? getDeliveryEstimate(county) : null),
+    [serviceType, county]
+  );
+  const deliveryFee = deliveryEstimate?.amount ?? 0;
+  const orderTotal = cartTotal + deliveryFee;
+
   const processWhatsAppCheckout = async () => {
     if (!checkoutCustomerName?.trim() || !checkoutCustomerPhone?.trim() || !county || !deliveryDate) {
       alert('Please fill in your name, WhatsApp number, county, and required date');
@@ -190,7 +198,9 @@ export default function Storefront({
         lineItems,
         subtotal: cartSubtotal,
         discount: cartDiscount,
-        total: cartTotal,
+        deliveryFee: deliveryFee || undefined,
+        deliveryEstimate: deliveryEstimate ?? undefined,
+        total: orderTotal,
       };
 
       const details: WhatsAppCheckoutDetails = {
@@ -202,6 +212,8 @@ export default function Storefront({
         deliveryDate,
         paymentMethod: checkoutPaymentMethod,
         serviceType,
+        deliveryFee: deliveryFee || undefined,
+        deliveryFeeRange: deliveryEstimate?.rangeLabel,
       };
 
       openWhatsAppOrderToAdmin(orderInput);
@@ -498,6 +510,26 @@ export default function Storefront({
                             </button>
                           ))}
                         </div>
+                        {serviceType === 'payment_delivery' && (
+                          <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-900 leading-relaxed">
+                            {county && deliveryEstimate ? (
+                              <>
+                                <p className="font-bold mb-1">
+                                  Delivery to {county}: {deliveryEstimate.rangeLabel}
+                                </p>
+                                <p className="mb-1">
+                                  Estimated <strong>KSh {deliveryEstimate.amount.toLocaleString()}</strong> added to total
+                                  {county === 'Nairobi' || ['Kiambu', 'Kajiado', 'Machakos'].includes(county)
+                                    ? ' (around Nairobi: KSh 150–200 by exact area)'
+                                    : ' (KSh 200–500 by county & distance)'}
+                                </p>
+                                <p className="text-amber-700 italic">{deliveryEstimate.note}</p>
+                              </>
+                            ) : (
+                              <p>Select your county to see the delivery estimate. Fees from KSh 150 (Nairobi area) to KSh 500 (far counties) — negotiable on Connect.</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="text-[10px] font-bold text-gray-400 uppercase mb-2 block">Payment via</label>
@@ -526,8 +558,17 @@ export default function Storefront({
                 <div className="p-5 border-t">
                   <div className="flex justify-between mb-1"><span>Subtotal</span><span className="font-bold">KSh {promoSubtotal}</span></div>
                   {promoSavings > 0 && <p className="text-sm text-pink-600 mb-1">Promo savings: -KSh {promoSavings}</p>}
-                  {cartDiscount > 0 && <p className="text-sm text-emerald-600 mb-2">Bundle discount: -KSh {cartDiscount}</p>}
-                  <div className="flex justify-between mb-3"><span>Total</span><span className="text-xl font-black">KSh {cartTotal}</span></div>
+                  {cartDiscount > 0 && <p className="text-sm text-emerald-600 mb-1">Bundle discount: -KSh {cartDiscount}</p>}
+                  {serviceType === 'payment_delivery' && deliveryEstimate && (
+                    <div className="flex justify-between text-sm text-amber-700 mb-1">
+                      <span>Delivery est. ({deliveryEstimate.rangeLabel})</span>
+                      <span className="font-bold">+KSh {deliveryFee}</span>
+                    </div>
+                  )}
+                  {serviceType === 'payment_delivery' && deliveryEstimate && (
+                    <p className="text-[10px] text-gray-400 mb-2 italic">Delivery fee is negotiable — final amount confirmed on Connect</p>
+                  )}
+                  <div className="flex justify-between mb-3"><span>Total</span><span className="text-xl font-black">KSh {orderTotal}</span></div>
                   <button onClick={processWhatsAppCheckout} disabled={checkoutLoading}
                     className="w-full bg-pink-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-pink-400 disabled:opacity-60">
                     <Sparkles size={18} /> {checkoutLoading ? 'Sending...' : 'Send order to BLUMERA'}

@@ -71,7 +71,7 @@ export const CHATBOT_FAQ = [
   {
     id: 'delivery',
     question: 'Do you deliver?',
-    answer: 'Yes! We deliver countrywide across Kenya from Mururui. You\'ll get updates throughout your delivery.',
+    answer: 'Yes! Payment + Delivery adds a fee from KSh 150–200 around Nairobi, or KSh 200–500 outside Nairobi depending on county and distance. The exact amount can be negotiated on Connect.',
   },
   {
     id: 'order',

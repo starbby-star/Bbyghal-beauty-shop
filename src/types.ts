@@ -106,6 +106,8 @@ export interface Sale {
   deliveryLocation?: string;
   deliveryDate?: string;
   serviceType?: OrderServiceType;
+  deliveryFee?: number;
+  deliveryFeeRange?: string;
 }
 
 export type OrderServiceType = 'payment_delivery' | 'payment_only';
@@ -119,6 +121,8 @@ export interface WhatsAppCheckoutDetails {
   deliveryDate: string;
   paymentMethod: PaymentMethod;
   serviceType: OrderServiceType;
+  deliveryFee?: number;
+  deliveryFeeRange?: string;
 }
 
 export interface CartItem {
