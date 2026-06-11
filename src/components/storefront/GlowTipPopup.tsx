@@ -49,10 +49,10 @@ export default function GlowTipPopup({ tip, theme = 'default' }: GlowTipPopupPro
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -8, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-          className="fixed top-20 right-4 left-4 sm:left-auto sm:max-w-[300px] z-[45]"
+          className="fixed inset-0 z-[45] flex items-center justify-center p-4 pointer-events-none"
         >
           <div
-            className={`${cardClass} text-white rounded-2xl shadow-xl border p-3.5 pr-9 relative`}
+            className={`${cardClass} text-white rounded-2xl shadow-2xl border p-3.5 pr-9 relative w-full max-w-[300px] pointer-events-auto`}
           >
             <button
               onClick={dismiss}
