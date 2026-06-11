@@ -27,6 +27,14 @@ export interface Seller {
 
 export type Category = 'All' | 'Soaps' | 'Facial' | 'Hair' | 'Braids' | 'Makeup' | 'Skincare' | 'Perfumes' | 'Nails' | 'Body' | 'Accessories' | 'Other';
 
+/** A single stock intake batch — oldest batch sells first (FIFO). */
+export interface StockBatch {
+  date: string;
+  quantity: number;
+  addedBy: string;
+  buyingPrice: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -54,7 +62,7 @@ export interface Product {
   // New fields for braids
   braidType?: string; // e.g., Jibambe, Havana Curl, Normal
   colorNumber?: string; // e.g., 1, 33, 27, 1/33
-  stockUpdates?: { date: string, quantity: number, addedBy: string }[];
+  stockUpdates?: StockBatch[];
 }
 
 export interface RequestedProduct {

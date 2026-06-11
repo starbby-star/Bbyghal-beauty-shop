@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -32,9 +32,6 @@ import {
   ChevronLeft,
   Key,
   Zap,
-  Upload,
-  ImageIcon as ImageIcon,
-  Filter,
   ClipboardList,
   Edit2
 } from 'lucide-react';
@@ -42,11 +39,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CATEGORIES, THEME } from './constants';
 import { Product, Category, Role, Sale, PaymentMethod, Seller, PaymentStatus, CartItem, RequestedProduct } from './types';
 import Storefront from './Storefront';
+import InventoryPanel from './components/InventoryPanel';
+import { deductStockFIFO, LOW_STOCK_THRESHOLD, HIGH_STOCK_THRESHOLD } from './utils/inventory';
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
-
-// Constants
-const LOW_STOCK_THRESHOLD = 5;
-const HIGH_STOCK_THRESHOLD = 50;
 
 // Mock Data
 const MOCK_PRODUCTS: Product[] = [
@@ -2226,9 +2221,6 @@ export default function App() {
   const [activeEmployee, setActiveEmployee] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('sales');
   const [selectedCategory, setSelectedCategory] = useState<Category>('All');
-  const [inventoryCategory, setInventoryCategory] = useState<Category>('All');
-  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
-  const [showHighStockOnly, setShowHighStockOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedProductForSale, setSelectedProductForSale] = useState<Product | null>(null);
@@ -2246,8 +2238,6 @@ export default function App() {
   const [sales, setSales] = useState<Sale[]>(MOCK_SALES);
   const [sellers, setSellers] = useState<Seller[]>(MOCK_SELLERS);
   const [agents, setAgents] = useState<string[]>(INITIAL_AGENTS);
-  const [isAddingProduct, setIsAddingProduct] = useState(false);
-  const [isAddingOn, setIsAddingOn] = useState(false);
   const [isAddingSeller, setIsAddingSeller] = useState(false);
   const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
   const [isAddingAgent, setIsAddingAgent] = useState(false);
@@ -2262,28 +2252,11 @@ export default function App() {
     contact: '',
     whatsappNumber: ''
   });
-  const [addOnSearchQuery, setAddOnSearchQuery] = useState('');
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [pin, setPin] = useState('');
   const [loginMode, setLoginMode] = useState<'select' | 'pin'>('select');
   const [loginTarget, setLoginTarget] = useState<'admin' | 'Employee 1' | 'Employee 2' | null>(null);
   const EMP_PINS: Record<string, string> = { 'Employee 1': '1111', 'Employee 2': '2222' };
-  const [newProductData, setNewProductData] = useState({
-    name: '',
-    brand: '',
-    category: 'Other' as Category,
-    quantity: 0,
-    buyingPrice: 0,
-    sellingPrice: 0,
-    imageUrl: '',
-    bestUsedBy: '',
-    bestUsedWhen: '',
-    bestUsedWith: '',
-    resultsAfter: '',
-    braidType: '',
-    colorNumber: ''
-  });
-  const [addOnData, setAddOnData] = useState({ productId: '', quantity: 0 });
   const [requestedProducts, setRequestedProducts] = useState<RequestedProduct[]>([]);
   const [isRequestingProduct, setIsRequestingProduct] = useState(false);
   const [requestedProductName, setRequestedProductName] = useState('');
@@ -2348,14 +2321,26 @@ export default function App() {
   const handleCheckout = () => {
     if (cart.length === 0) return;
 
-    const newSales: Sale[] = cart.map(item => {
-      // Distribute discount proportionally or just apply to the first item for simplicity.
-      // We'll apply the 10 Ksh discount to the first item if applicable.
-      const isFirstItem = cart.indexOf(item) === 0;
-      const itemDiscount = (isFirstItem && cartDiscount > 0) ? cartDiscount : 0;
+    let updatedProducts = [...products];
 
-      const totalPrice = (item.product.sellingPrice * item.quantity) - itemDiscount;
-      const totalProfit = ((item.product.sellingPrice - item.product.lastPrice) * item.quantity) - itemDiscount;
+    const newSales: Sale[] = cart.map((item, index) => {
+      const isFirstItem = index === 0;
+      const itemDiscount = isFirstItem && cartDiscount > 0 ? cartDiscount : 0;
+      const pIndex = updatedProducts.findIndex((p) => p.id === item.product.id);
+      const product = pIndex >= 0 ? updatedProducts[pIndex] : item.product;
+      const fifo = deductStockFIFO(product, item.quantity);
+
+      if (pIndex >= 0) {
+        updatedProducts[pIndex] = {
+          ...product,
+          stockQuantity: fifo.stockQuantity,
+          stockUpdates: fifo.stockUpdates,
+        };
+      }
+
+      const totalPrice = item.product.sellingPrice * item.quantity - itemDiscount;
+      const totalProfit =
+        (item.product.sellingPrice - fifo.consumedBuyingPrice) * item.quantity - itemDiscount;
 
       return {
         id: Math.random().toString(36).substr(2, 9),
@@ -2364,10 +2349,10 @@ export default function App() {
         brand: item.product.brand,
         quantity: item.quantity,
         sellingPrice: item.product.sellingPrice,
-        buyingPrice: item.product.lastPrice,
+        buyingPrice: fifo.consumedBuyingPrice,
         profit: totalProfit,
         paymentMethod: checkoutPaymentMethod,
-        paymentStatus: 'Paid',
+        paymentStatus: 'Paid' as PaymentStatus,
         amountPaid: totalPrice,
         debtAmount: 0,
         staffId: 'online',
@@ -2381,20 +2366,7 @@ export default function App() {
     });
 
     setSales([...newSales, ...sales]);
-
-    // Update stock
-    const updatedProducts = [...products];
-    cart.forEach(item => {
-      const pIndex = updatedProducts.findIndex(p => p.id === item.product.id);
-      if (pIndex >= 0) {
-        updatedProducts[pIndex] = {
-          ...updatedProducts[pIndex],
-          stockQuantity: updatedProducts[pIndex].stockQuantity - item.quantity
-        };
-      }
-    });
     setProducts(updatedProducts);
-
     setCart([]);
     setIsCartOpen(false);
     setCheckoutCustomerName('');
@@ -2551,19 +2523,6 @@ export default function App() {
     }).sort((a, b) => b.performance - a.performance);
   }, [products, sales]);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewProductData({ ...newProductData, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleRecordSale = () => {
     if (!selectedProductForSale || !paymentMethod) return;
 
@@ -2572,10 +2531,11 @@ export default function App() {
       return;
     }
 
-    const totalPrice = (selectedProductForSale.sellingPrice * saleQuantity) - discount;
+    const fifo = deductStockFIFO(selectedProductForSale, saleQuantity);
+    const totalPrice = selectedProductForSale.sellingPrice * saleQuantity - discount;
     const debtAmount = totalPrice - amountPaid;
-    // Profit is reduced by the discount
-    const totalProfit = ((selectedProductForSale.sellingPrice - selectedProductForSale.lastPrice) * saleQuantity) - discount;
+    const totalProfit =
+      (selectedProductForSale.sellingPrice - fifo.consumedBuyingPrice) * saleQuantity - discount;
 
     const newSale: Sale = {
       id: Math.random().toString(36).substr(2, 9),
@@ -2584,7 +2544,7 @@ export default function App() {
       brand: selectedProductForSale.brand,
       quantity: saleQuantity,
       sellingPrice: selectedProductForSale.sellingPrice,
-      buyingPrice: selectedProductForSale.lastPrice,
+      buyingPrice: fifo.consumedBuyingPrice,
       profit: totalProfit,
       paymentMethod: paymentMethod,
       paymentStatus: paymentStatus,
@@ -2602,23 +2562,10 @@ export default function App() {
     setSales([newSale, ...sales]);
     setProducts(products.map(p => {
       if (p.id === selectedProductForSale.id) {
-        let remainingToDeduct = saleQuantity;
-        let newStockUpdates = [...(p.stockUpdates || [])];
-
-        while (remainingToDeduct > 0 && newStockUpdates.length > 0) {
-          if (newStockUpdates[0].quantity <= remainingToDeduct) {
-            remainingToDeduct -= newStockUpdates[0].quantity;
-            newStockUpdates.shift(); // Remove the oldest batch fully
-          } else {
-            newStockUpdates[0] = { ...newStockUpdates[0], quantity: newStockUpdates[0].quantity - remainingToDeduct };
-            remainingToDeduct = 0;
-          }
-        }
-
         return {
           ...p,
-          stockQuantity: p.stockQuantity - saleQuantity,
-          stockUpdates: newStockUpdates
+          stockQuantity: fifo.stockQuantity,
+          stockUpdates: fifo.stockUpdates,
         };
       }
       return p;
@@ -3097,12 +3044,7 @@ export default function App() {
                           </div>
                         </div>
                         <button
-                          onClick={() => {
-                            setActiveTab('inventory');
-                            setInventoryCategory('All');
-                            setShowLowStockOnly(true);
-                            setShowHighStockOnly(false);
-                          }}
+                          onClick={() => setActiveTab('inventory')}
                           className="px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 text-sm font-bold rounded-xl transition-colors"
                         >
                           View Inventory
@@ -3121,12 +3063,7 @@ export default function App() {
                           </div>
                         </div>
                         <button
-                          onClick={() => {
-                            setActiveTab('inventory');
-                            setInventoryCategory('All');
-                            setShowHighStockOnly(true);
-                            setShowLowStockOnly(false);
-                          }}
+                          onClick={() => setActiveTab('inventory')}
                           className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-bold rounded-xl transition-colors"
                         >
                           View Inventory
@@ -3949,181 +3886,21 @@ export default function App() {
             )}
 
             {activeTab === 'inventory' && (
-              <motion.div
-                key="inventory"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <h3 className="font-bold text-gray-800">Inventory Management</h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setIsAddingProduct(true)}
-                      className="flex items-center gap-2 bg-pink-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-pink-600 shadow-md shadow-pink-200 transition-all active:scale-95"
-                    >
-                      <Plus size={18} />
-                      <span>New Product</span>
-                    </button>
-                    <button
-                      onClick={() => setIsAddingOn(true)}
-                      className="flex items-center gap-2 bg-white text-pink-500 border border-pink-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-pink-50 transition-all active:scale-95"
-                    >
-                      <Plus size={18} />
-                      <span>Add On</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Filter size={18} className="text-gray-400" />
-                      <select
-                        value={inventoryCategory}
-                        onChange={(e) => setInventoryCategory(e.target.value as Category)}
-                        className="bg-white border border-pink-100 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 focus:ring-2 focus:ring-pink-300 outline-none"
-                      >
-                        {CATEGORIES.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowLowStockOnly(!showLowStockOnly);
-                        if (!showLowStockOnly) setShowHighStockOnly(false);
-                      }}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${showLowStockOnly
-                          ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                          : 'bg-white text-gray-600 border border-pink-100 hover:bg-pink-50'
-                        }`}
-                    >
-                      <AlertTriangle size={16} className={showLowStockOnly ? 'text-amber-500' : 'text-gray-400'} />
-                      Low Stock Only
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowHighStockOnly(!showHighStockOnly);
-                        if (!showHighStockOnly) setShowLowStockOnly(false);
-                      }}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${showHighStockOnly
-                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                          : 'bg-white text-gray-600 border border-pink-100 hover:bg-pink-50'
-                        }`}
-                    >
-                      <TrendingUp size={16} className={showHighStockOnly ? 'text-blue-500' : 'text-gray-400'} />
-                      High Stock Only
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-3xl shadow-sm border border-pink-100 overflow-hidden">
-                  <table className="w-full text-left">
-                    <thead className="bg-pink-50/50 text-[10px] font-bold uppercase text-gray-400 tracking-wider">
-                      <tr>
-                        <th className="px-6 py-4">Product</th>
-                        <th className="px-6 py-4">Category</th>
-                        <th className="px-6 py-4">Stock</th>
-                        {role === 'admin' && (
-                          <>
-                            <th className="px-6 py-4">Buying Price</th>
-                            <th className="px-6 py-4">Profit</th>
-                          </>
-                        )}
-                        <th className="px-6 py-4">Selling Price</th>
-                        <th className="px-6 py-4">Status</th>
-                        <th className="px-6 py-4">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-pink-50">
-                      {products
-                        .filter(p => (inventoryCategory === 'All' || p.category === inventoryCategory) &&
-                          (!showLowStockOnly || p.stockQuantity <= LOW_STOCK_THRESHOLD) &&
-                          (!showHighStockOnly || p.stockQuantity >= HIGH_STOCK_THRESHOLD))
-                        .sort((a, b) => {
-                          const dateA = a.createdAt.split('T')[0];
-                          const dateB = b.createdAt.split('T')[0];
-                          if (dateA !== dateB) return dateB.localeCompare(dateA);
-                          return a.name.localeCompare(b.name);
-                        })
-                        .map(product => (
-                          <tr key={product.id} className="hover:bg-pink-50/30 transition-colors">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <img src={product.imageUrl} className="w-8 h-8 rounded-lg object-cover" referrerPolicy="no-referrer" />
-                                <div>
-                                  <p className="text-sm font-bold text-gray-700">{product.name}</p>
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-[10px] text-pink-400 font-bold uppercase">{product.brand}</p>
-                                    {product.braidType && (
-                                      <span className="text-[8px] font-bold bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded uppercase">
-                                        {product.braidType} {product.colorNumber && `(${product.colorNumber})`}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-500">{product.category}</td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <span className={`text-sm font-semibold ${product.stockQuantity <= LOW_STOCK_THRESHOLD && product.stockQuantity > 0 ? 'text-amber-600' : product.stockQuantity === 0 ? 'text-red-600' : product.stockQuantity >= HIGH_STOCK_THRESHOLD ? 'text-blue-600' : 'text-gray-700'}`}>
-                                  {product.stockQuantity}
-                                </span>
-                                {product.stockUpdates && product.stockUpdates.length > 0 && product.stockQuantity > 0 && (
-                                  <span className="text-[10px] text-gray-400 whitespace-nowrap mt-0.5" title="Oldest batch date (FIFO)">
-                                    Batch: {new Date(product.stockUpdates[0].date).toLocaleDateString()}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            {role === 'admin' && (
-                              <>
-                                <td className="px-6 py-4 text-sm font-bold text-gray-600">KSh {product.lastPrice}</td>
-                                <td className="px-6 py-4 text-sm font-bold text-emerald-600">KSh {product.sellingPrice - product.lastPrice}</td>
-                              </>
-                            )}
-                            <td className="px-6 py-4 text-sm font-bold text-pink-600">KSh {product.sellingPrice}</td>
-                            <td className="px-6 py-4">
-                              {product.stockQuantity === 0 ? (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-red-100 text-red-600 flex items-center gap-1 w-max">
-                                  <AlertTriangle size={12} /> Out of Stock
-                                </span>
-                              ) : product.stockQuantity <= LOW_STOCK_THRESHOLD ? (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-amber-100 text-amber-600 flex items-center gap-1 w-max">
-                                  <AlertTriangle size={12} /> Low Stock
-                                </span>
-                              ) : product.stockQuantity >= HIGH_STOCK_THRESHOLD ? (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-blue-100 text-blue-600 flex items-center gap-1 w-max">
-                                  <TrendingUp size={12} /> High Stock
-                                </span>
-                              ) : (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded-lg uppercase bg-emerald-100 text-emerald-600">In Stock</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4">
-                              <button
-                                disabled={product.stockQuantity === 0}
-                                onClick={() => {
-                                  setSelectedProductForSale(product);
-                                  setAmountPaid(product.sellingPrice);
-                                  setSaleQuantity(1);
-                                  setPaymentStatus('Paid');
-                                  setPaymentMethod(null);
-                                  setDiscount(0);
-                                }}
-                                className="p-2 bg-pink-50 text-pink-500 rounded-xl hover:bg-pink-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <ShoppingCart size={18} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </motion.div>
+              <InventoryPanel
+                products={products}
+                setProducts={setProducts}
+                role={role}
+                activeEmployee={activeEmployee}
+                onRecordSale={(product) => {
+                  setSelectedProductForSale(product);
+                  setAmountPaid(product.sellingPrice);
+                  setSaleQuantity(1);
+                  setPaymentStatus('Paid');
+                  setPaymentMethod(null);
+                  setDiscount(0);
+                }}
+                showNotification={showNotification}
+              />
             )}
 
             {activeTab === 'required-products' && (
@@ -4580,329 +4357,6 @@ export default function App() {
                       )}
                     </button>
                   </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* New Product Modal */}
-      <AnimatePresence>
-        {isAddingProduct && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsAddingProduct(false)}
-              className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden border border-pink-100 max-h-[95vh] flex flex-col"
-            >
-              <div className="p-6 overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-black text-gray-800">Add New Product</h3>
-                  <button onClick={() => setIsAddingProduct(false)} className="p-2 hover:bg-pink-50 rounded-full text-gray-400">
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Product Name</label>
-                    <input
-                      type="text"
-                      value={newProductData.name}
-                      onChange={(e) => setNewProductData({ ...newProductData, name: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Brand</label>
-                    <input
-                      type="text"
-                      value={newProductData.brand}
-                      onChange={(e) => setNewProductData({ ...newProductData, brand: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Quantity</label>
-                      <input
-                        type="number"
-                        value={newProductData.quantity}
-                        onChange={(e) => setNewProductData({ ...newProductData, quantity: parseInt(e.target.value) })}
-                        className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Buying Price</label>
-                      <input
-                        type="number"
-                        value={newProductData.buyingPrice}
-                        onChange={(e) => setNewProductData({ ...newProductData, buyingPrice: parseFloat(e.target.value) })}
-                        className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Selling Price</label>
-                    <input
-                      type="number"
-                      value={newProductData.sellingPrice}
-                      onChange={(e) => setNewProductData({ ...newProductData, sellingPrice: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Category</label>
-                    <select
-                      value={newProductData.category}
-                      onChange={(e) => setNewProductData({ ...newProductData, category: e.target.value as Category })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    >
-                      {CATEGORIES.filter(c => c !== 'All').map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {newProductData.category === 'Braids' && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Braid Type</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., Jibambe, Havana Curl"
-                          value={newProductData.braidType}
-                          onChange={(e) => setNewProductData({ ...newProductData, braidType: e.target.value })}
-                          className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Color Number</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., 1, 33, 1/33"
-                          value={newProductData.colorNumber}
-                          onChange={(e) => setNewProductData({ ...newProductData, colorNumber: e.target.value })}
-                          className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Best Used By (Solution)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Dry skin, Dandruff"
-                      value={newProductData.bestUsedBy}
-                      onChange={(e) => setNewProductData({ ...newProductData, bestUsedBy: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Best Used When</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., At night, In the morning"
-                      value={newProductData.bestUsedWhen}
-                      onChange={(e) => setNewProductData({ ...newProductData, bestUsedWhen: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Best Used With</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Vitamin C Serum"
-                      value={newProductData.bestUsedWith}
-                      onChange={(e) => setNewProductData({ ...newProductData, bestUsedWith: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Results After</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., 2 weeks, 1 month"
-                      value={newProductData.resultsAfter}
-                      onChange={(e) => setNewProductData({ ...newProductData, resultsAfter: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Product Photo</label>
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setNewProductData({ ...newProductData, imageUrl: reader.result as string });
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                      className="w-full h-24 bg-pink-50 border-2 border-dashed border-pink-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-pink-100 transition-all overflow-hidden relative"
-                    >
-                      {newProductData.imageUrl ? (
-                        <>
-                          <img src={newProductData.imageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                            <Upload className="text-white" size={20} />
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <ImageIcon className="text-pink-300 mb-1" size={24} />
-                          <p className="text-[10px] text-pink-400 font-bold uppercase">Drop or Click to Upload</p>
-                        </>
-                      )}
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleImageUpload}
-                        accept="image/*"
-                        className="hidden"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const newProduct: Product = {
-                        id: Math.random().toString(36).substr(2, 9),
-                        name: newProductData.name,
-                        brand: newProductData.brand,
-                        category: newProductData.category,
-                        sellerId: 's1',
-                        firstPrice: newProductData.buyingPrice,
-                        lastPrice: newProductData.buyingPrice,
-                        sellingPrice: newProductData.sellingPrice,
-                        stockQuantity: newProductData.quantity,
-                        isFixedPrice: true,
-                        imageUrl: newProductData.imageUrl || `https://picsum.photos/seed/${newProductData.name}/200/200`,
-                        createdAt: new Date().toISOString(),
-                        bestUsedBy: newProductData.bestUsedBy,
-                        bestUsedWhen: newProductData.bestUsedWhen,
-                        bestUsedWith: newProductData.bestUsedWith,
-                        resultsAfter: newProductData.resultsAfter,
-                        braidType: newProductData.category === 'Braids' ? newProductData.braidType : undefined,
-                        colorNumber: newProductData.category === 'Braids' ? newProductData.colorNumber : undefined,
-                        stockUpdates: [{ date: new Date().toISOString(), quantity: newProductData.quantity, addedBy: role === 'admin' ? 'Admin' : (activeEmployee || 'Staff') }]
-                      };
-                      setProducts([...products, newProduct]);
-                      setIsAddingProduct(false);
-                      setNewProductData({
-                        name: '', brand: '', category: 'Other', quantity: 0, buyingPrice: 0, sellingPrice: 0, imageUrl: '',
-                        bestUsedBy: '', bestUsedWhen: '', bestUsedWith: '', resultsAfter: '', braidType: '', colorNumber: ''
-                      });
-                    }}
-                    className="w-full bg-pink-500 text-white py-3 rounded-xl font-bold shadow-xl shadow-pink-100 active:scale-95 transition-all mt-2"
-                  >
-                    Save Product
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Add On Modal */}
-      <AnimatePresence>
-        {isAddingOn && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsAddingOn(false)}
-              className="absolute inset-0 bg-pink-900/20 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden border border-pink-100 max-h-[95vh] flex flex-col"
-            >
-              <div className="p-6 overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-black text-gray-800">Add On Stock</h3>
-                  <button onClick={() => setIsAddingOn(false)} className="p-2 hover:bg-pink-50 rounded-full text-gray-400">
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Search & Select Product</label>
-                    <div className="relative mb-2">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                      <input
-                        type="text"
-                        placeholder="Type to filter..."
-                        className="w-full pl-9 pr-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                        onChange={(e) => setAddOnSearchQuery(e.target.value)}
-                      />
-                    </div>
-                    <select
-                      value={addOnData.productId}
-                      onChange={(e) => setAddOnData({ ...addOnData, productId: e.target.value })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    >
-                      <option value="">Select a product...</option>
-                      {[...products]
-                        .filter(p => p.name.toLowerCase().includes(addOnSearchQuery.toLowerCase()) || p.brand.toLowerCase().includes(addOnSearchQuery.toLowerCase()))
-                        .sort((a, b) => {
-                          const dateA = a.createdAt.split('T')[0];
-                          const dateB = b.createdAt.split('T')[0];
-                          if (dateA !== dateB) return dateB.localeCompare(dateA);
-                          return a.name.localeCompare(b.name);
-                        })
-                        .map(p => (
-                          <option key={p.id} value={p.id}>{p.name} ({p.brand})</option>
-                        ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Quantity Added</label>
-                    <input
-                      type="number"
-                      value={addOnData.quantity}
-                      onChange={(e) => setAddOnData({ ...addOnData, quantity: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 bg-pink-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-pink-300 transition-all"
-                    />
-                  </div>
-                  <div className="p-3 bg-pink-50 rounded-xl text-[10px] text-pink-400 font-bold uppercase">
-                    Date: {new Date().toLocaleDateString()}
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (!addOnData.productId) return;
-                      setProducts(products.map(p => p.id === addOnData.productId ? {
-                        ...p,
-                        stockQuantity: p.stockQuantity + addOnData.quantity,
-                        stockUpdates: [...(p.stockUpdates || []), { date: new Date().toISOString(), quantity: addOnData.quantity, addedBy: role === 'admin' ? 'Admin' : (activeEmployee || 'Staff') }]
-                      } : p));
-                      setIsAddingOn(false);
-                      setAddOnData({ productId: '', quantity: 0 });
-                    }}
-                    className="w-full bg-pink-500 text-white py-3 rounded-xl font-bold shadow-xl shadow-pink-100 active:scale-95 transition-all mt-2"
-                  >
-                    Update Stock
-                  </button>
                 </div>
               </div>
             </motion.div>
