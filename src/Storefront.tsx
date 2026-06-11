@@ -16,6 +16,7 @@ import OfferBanner from './components/storefront/OfferBanner';
 import HomePage from './components/storefront/HomePage';
 import HomeChatbot from './components/storefront/HomeChatbot';
 import GlowTipPopup from './components/storefront/GlowTipPopup';
+import ThemeDayRibbon from './components/storefront/ThemeDayRibbon';
 import PromoPrice from './components/storefront/PromoPrice';
 import { getActiveTheme, getActiveGlowTip, getEffectivePrice } from './utils/homePromos';
 import { getDeliveryEstimate } from './utils/delivery';
@@ -39,7 +40,7 @@ const LogoImage = () => {
       {!error ? (
         <img src="/logo.jpg" alt="BLUMERA" className="w-full h-full object-contain" onError={() => setError(true)} />
       ) : (
-        <span className="text-pink-500 font-display font-black text-xl">B</span>
+        <span className="sf-tagline font-display font-black text-xl">B</span>
       )}
     </div>
   );
@@ -245,11 +246,11 @@ export default function Storefront({
         <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" />
         <span className="absolute top-3 left-3 bg-black/80 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">{product.category}</span>
         <button onClick={(e) => toggleWishlist(product, e)} className="absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm">
-          <Heart size={15} className={wishlist.includes(product.id) ? 'fill-pink-500 text-pink-500' : 'text-gray-400'} />
+          <Heart size={15} className={wishlist.includes(product.id) ? 'sf-wishlist-active' : 'text-gray-400'} />
         </button>
       </div>
       <div className="p-4 flex flex-col flex-1">
-        <p className="text-[10px] font-bold text-pink-500 uppercase tracking-widest">{product.brand}</p>
+        <p className="sf-brand-label text-[10px] font-bold uppercase tracking-widest">{product.brand}</p>
         <h3 className="font-bold text-gray-800 text-sm line-clamp-2 mb-2 cursor-pointer hover:text-pink-600" onClick={() => setSelectedProduct(product)}>{product.name}</h3>
         <div className="flex items-center gap-0.5 mb-3">
           {[...Array(5)].map((_, j) => (
@@ -258,7 +259,7 @@ export default function Storefront({
         </div>
         <div className="flex items-center justify-between mt-auto">
           <PromoPrice price={getEffectivePrice(product, homePromoConfig)} size="sm" />
-          <button onClick={() => addToCart(product)} className="w-9 h-9 bg-black text-white rounded-xl flex items-center justify-center hover:bg-pink-500 transition-colors">
+          <button onClick={() => addToCart(product)} className="sf-btn-primary w-9 h-9 rounded-xl flex items-center justify-center transition-colors">
             <Plus size={18} />
           </button>
         </div>
@@ -268,19 +269,13 @@ export default function Storefront({
 
   return (
     <div className={`min-h-screen storefront-gradient flex flex-col font-sans text-gray-800 theme-${activeTheme}`}>
-      <header className={`sticky top-0 z-50 backdrop-blur-xl border-b ${
-        activeTheme === 'pink-thursday'
-          ? 'bg-gradient-to-r from-black via-pink-950/95 to-amber-950/90 border-amber-500/20'
-          : activeTheme === 'sellout-day'
-          ? 'bg-gradient-to-r from-amber-950/95 via-black to-black border-amber-400/20'
-          : 'bg-black/95 border-white/10'
-      }`}>
+      <header className="sf-header sticky top-0 z-50 backdrop-blur-xl border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-[72px] flex items-center justify-between gap-4">
           <button onClick={() => navigate('home')} className="flex items-center gap-3 text-left">
             <LogoImage />
             <div>
               <h1 className="text-xl font-display font-bold text-white leading-none">{BRAND.systemName}</h1>
-              <p className="text-[10px] text-pink-500 font-bold">{BRAND.tagline}</p>
+              <p className="sf-tagline text-[10px] font-bold">{BRAND.tagline}</p>
             </div>
           </button>
 
@@ -290,7 +285,7 @@ export default function Storefront({
                 key={item.id}
                 onClick={() => navigate(item.id)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  activePage === item.id ? 'bg-pink-500 text-white' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  activePage === item.id ? 'sf-nav-btn--active' : 'sf-nav-btn'
                 }`}
               >
                 {item.label}
@@ -299,14 +294,14 @@ export default function Storefront({
           </nav>
 
           <div className="flex items-center gap-2">
-            <button onClick={onAdminLoginClick} className="hidden sm:block text-xs text-gray-400 hover:text-pink-400 px-3 py-2">Staff</button>
+            <button onClick={onAdminLoginClick} className="hidden sm:block text-xs text-gray-400 hover:text-white px-3 py-2">Staff</button>
             <button onClick={() => { setShowWishlist(!showWishlist); navigate('shop'); }} className="p-2.5 rounded-full bg-white/10 text-white border border-white/20">
-              <Heart size={18} className={showWishlist ? 'fill-pink-500 text-pink-500' : ''} />
+              <Heart size={18} className={showWishlist ? 'sf-wishlist-active' : ''} />
             </button>
-            <button onClick={() => setIsCartOpen(true)} className="relative p-2.5 bg-pink-500 text-white rounded-full">
+            <button onClick={() => setIsCartOpen(true)} className="sf-cart-btn relative p-2.5 rounded-full">
               <ShoppingCart size={18} />
               {cartTotalItems > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-white text-pink-600 text-[9px] font-bold rounded-full flex items-center justify-center">{cartTotalItems}</span>
+                <span className="sf-cart-badge absolute -top-1 -right-1 w-4 h-4 text-[9px] font-bold rounded-full flex items-center justify-center">{cartTotalItems}</span>
               )}
             </button>
           </div>
@@ -314,13 +309,14 @@ export default function Storefront({
 
         <nav className="md:hidden flex gap-1 overflow-x-auto hide-scrollbar px-4 pb-3">
           {NAV.map((item) => (
-            <button key={item.id} onClick={() => navigate(item.id)} className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${activePage === item.id ? 'bg-pink-500 text-white' : 'bg-white/10 text-gray-300'}`}>
+            <button key={item.id} onClick={() => navigate(item.id)} className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${activePage === item.id ? 'sf-nav-btn--active' : 'sf-nav-btn bg-white/10'}`}>
               {item.label}
             </button>
           ))}
         </nav>
       </header>
 
+      <ThemeDayRibbon theme={activeTheme} config={homePromoConfig} />
       <GlowTipPopup tip={glowTip} theme={activeTheme} />
       <OfferBanner onNavigate={(page) => navigate(page)} homePromoConfig={homePromoConfig} />
 
@@ -337,18 +333,18 @@ export default function Storefront({
 
       {activePage === 'shop' && (
         <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
-          <h2 className="text-3xl font-display font-bold mb-2">Shop</h2>
+          <h2 className="sf-page-title text-3xl font-bold mb-2">Shop</h2>
           <p className="text-gray-500 mb-8">Wigs, skincare, makeup & more — excluding braids</p>
-          <div className="sticky top-20 z-30 bg-white py-4 border-b border-gray-100 mb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="sf-shop-bar sticky top-20 z-30 py-4 border-b mb-8 -mx-4 px-4 sm:mx-0 sm:px-0 backdrop-blur-sm">
             <div className="relative mb-4">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-pink-300" />
+                className="sf-input w-full pl-12 pr-4 py-3 border border-gray-200 rounded-2xl text-sm outline-none focus:ring-2" />
             </div>
             <div className="flex gap-2 overflow-x-auto hide-scrollbar">
               {shopCategories.map((cat) => (
                 <button key={cat} onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap ${selectedCategory === cat ? 'bg-black text-white' : 'border border-gray-200'}`}>
+                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap ${selectedCategory === cat ? 'sf-cat-btn--active' : 'border border-gray-200'}`}>
                   {CATEGORY_ICONS[cat]} {cat}
                 </button>
               ))}
@@ -372,10 +368,10 @@ export default function Storefront({
       {activePage === 'about' && <main className="flex-1 w-full"><AboutPage /></main>}
       {activePage === 'contact' && <main className="flex-1 w-full"><ContactPage /></main>}
 
-      <footer className="border-t border-gray-100 py-8 bg-white mt-auto">
+      <footer className="sf-footer border-t py-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-gray-500 text-sm">{BRAND.systemName} · {BRAND.shopName}</p>
-          <ConnectButton className="bg-black text-white hover:bg-pink-500" size="sm" />
+          <ConnectButton size="sm" />
         </div>
       </footer>
 
@@ -404,7 +400,7 @@ export default function Storefront({
               </div>
               <div className="flex-1 p-6 overflow-y-auto">
                 <button onClick={() => setSelectedProduct(null)} className="float-right p-2"><X size={20} /></button>
-                <p className="text-xs font-bold text-pink-500 uppercase">{selectedProduct.brand}</p>
+                <p className="sf-brand-label text-xs font-bold uppercase">{selectedProduct.brand}</p>
                 <h2 className="text-2xl font-display font-bold mb-2">{selectedProduct.name}</h2>
                 <div className="mb-4">
                   <PromoPrice price={getEffectivePrice(selectedProduct, homePromoConfig)} size="lg" />
@@ -413,7 +409,7 @@ export default function Storefront({
                   <p className="text-sm text-gray-500 mb-4">{getBraidStyle(selectedProduct)} · #{selectedProduct.colorNumber}</p>
                 )}
                 <button onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); setIsCartOpen(true); }}
-                  className="w-full py-4 bg-black text-white rounded-2xl font-bold hover:bg-pink-500 flex items-center justify-center gap-2">
+                  className="sf-btn-primary w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
                   <ShoppingBag size={20} /> Add to Cart
                 </button>
               </div>
@@ -442,7 +438,7 @@ export default function Storefront({
                         <img src={item.product.imageUrl} alt="" className="w-16 h-16 rounded-xl object-cover" referrerPolicy="no-referrer" />
                         <div className="flex-1">
                           <p className="font-bold text-sm line-clamp-1">{item.product.name}</p>
-                          <p className="text-xs text-pink-500">{item.product.brand}</p>
+                          <p className="sf-brand-label text-xs">{item.product.brand}</p>
                           <div className="flex justify-between items-center mt-2">
                             <PromoPrice price={getEffectivePrice(item.product, homePromoConfig)} size="sm" />
                             <div className="flex items-center gap-2 border rounded-lg p-0.5">
@@ -455,7 +451,7 @@ export default function Storefront({
                         <button onClick={() => removeFromCart(item.product.id)} className="text-gray-300"><X size={16} /></button>
                       </div>
                     ))}
-                    <div className="bg-pink-50 border border-pink-100 rounded-2xl p-4">
+                    <div className="sf-callout-box border rounded-2xl p-4">
                       <p className="text-sm font-bold text-gray-800 mb-1">Place your order</p>
                       <p className="text-xs text-gray-600">
                         Enter <strong>your WhatsApp number</strong> — your order opens straight to {BRAND.systemName}. Receipt goes to you after payment.
@@ -570,7 +566,7 @@ export default function Storefront({
                   )}
                   <div className="flex justify-between mb-3"><span>Total</span><span className="text-xl font-black">KSh {orderTotal}</span></div>
                   <button onClick={processWhatsAppCheckout} disabled={checkoutLoading}
-                    className="w-full bg-pink-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-pink-400 disabled:opacity-60">
+                    className="sf-checkout-btn w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-60">
                     <Sparkles size={18} /> {checkoutLoading ? 'Sending...' : 'Send order to BLUMERA'}
                   </button>
                   <p className="text-[10px] text-center text-gray-400 mt-2">Opens WhatsApp to {BRAND.systemName} · receipt saved to your number after pay</p>

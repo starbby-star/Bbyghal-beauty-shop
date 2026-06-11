@@ -15,7 +15,7 @@ const sizes = {
 };
 
 export default function ConnectButton({ className = '', href, onClick, size = 'md' }: ConnectButtonProps) {
-  const base = `inline-flex items-center justify-center gap-2 font-bold rounded-full transition-all ${sizes[size]} ${className}`;
+  const base = `sf-connect-btn inline-flex items-center justify-center gap-2 font-bold rounded-full transition-all ${sizes[size]} ${className}`;
   const content = (
     <>
       <WhatsAppIcon size={size === 'sm' ? 16 : 20} />

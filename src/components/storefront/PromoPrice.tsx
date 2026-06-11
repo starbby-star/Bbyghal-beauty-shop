@@ -21,12 +21,12 @@ export default function PromoPrice({ price, size = 'md', className = '' }: Promo
   return (
     <div className={className}>
       {price.promoLabel && (
-        <span className={`inline-block font-black uppercase tracking-wider ${s.badge} text-pink-500 mb-0.5`}>
+        <span className={`sf-price-badge inline-block font-black uppercase tracking-wider ${s.badge} mb-0.5`}>
           {price.promoLabel}
         </span>
       )}
       <p className={`text-gray-400 line-through ${s.was}`}>Was KSh {price.was.toLocaleString()}</p>
-      <p className={`font-black text-pink-600 ${s.main}`}>Now KSh {price.current.toLocaleString()}</p>
+      <p className={`sf-price-now font-black ${s.main}`}>Now KSh {price.current.toLocaleString()}</p>
     </div>
   );
 }

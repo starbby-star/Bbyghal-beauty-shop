@@ -187,7 +187,7 @@ export default function HomeChatbot({ member, products, homePromoConfig, onNavig
               />
               <button
                 onClick={handleSend}
-                className="p-2.5 bg-pink-500 rounded-xl hover:bg-pink-400 transition-colors"
+                className="sf-btn-primary p-2.5 rounded-xl transition-colors"
                 aria-label="Send"
               >
                 <Send size={18} />
@@ -202,7 +202,7 @@ export default function HomeChatbot({ member, products, homePromoConfig, onNavig
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         className={`fixed bottom-6 right-4 sm:right-6 z-[54] w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-colors ${
-          open ? 'bg-gray-800 text-white' : 'bg-pink-500 text-white blumera-pink-glow'
+          open ? 'bg-gray-800 text-white' : 'sf-cart-btn blumera-pink-glow'
         }`}
         aria-label="Open chatbot"
       >

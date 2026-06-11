@@ -1,13 +1,14 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Sparkles } from 'lucide-react';
+import { X } from 'lucide-react';
 import { GlowTip } from '../../types';
+import { HomeTheme } from '../../types';
 
 const DISMISS_KEY = 'blumera_glow_tip_dismissed';
 
 interface GlowTipPopupProps {
   tip: GlowTip | null;
-  theme?: 'default' | 'pink-thursday' | 'sellout-day';
+  theme?: HomeTheme;
 }
 
 export default function GlowTipPopup({ tip, theme = 'default' }: GlowTipPopupProps) {
@@ -34,46 +35,48 @@ export default function GlowTipPopup({ tip, theme = 'default' }: GlowTipPopupPro
     }
   };
 
-  const cardClass =
-    theme === 'pink-thursday'
-      ? 'bg-gradient-to-br from-pink-600 to-amber-500 border-amber-300/50'
-      : theme === 'sellout-day'
-      ? 'bg-gradient-to-br from-amber-500 to-pink-500 border-white/40'
-      : 'bg-gradient-to-br from-pink-500 to-rose-500 border-pink-300/50';
+  const accentEmoji = theme === 'pink-thursday' ? '✨' : theme === 'sellout-day' ? '🔥' : '💫';
 
   return (
     <AnimatePresence>
       {tip && visible && (
         <motion.div
-          initial={{ opacity: 0, y: -12, scale: 0.92 }}
+          initial={{ opacity: 0, y: -24, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -8, scale: 0.95 }}
-          transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-          className="fixed inset-0 z-[45] flex items-center justify-center p-4 pointer-events-none"
+          exit={{ opacity: 0, y: -16, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+          className="fixed top-[4.75rem] sm:top-[5.25rem] left-1/2 -translate-x-1/2 z-[45] w-[min(100%-2rem,340px)]"
         >
-          <div
-            className={`${cardClass} text-white rounded-2xl shadow-2xl border p-3.5 pr-9 relative w-full max-w-[300px] pointer-events-auto`}
-          >
+          <div className="glow-popup-card text-white rounded-2xl p-4 pr-10 relative overflow-hidden">
+            {/* decorative corners */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-white/20 rounded-tl-2xl pointer-events-none" />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-white/20 rounded-tr-2xl pointer-events-none" />
+
             <button
               onClick={dismiss}
-              className="absolute top-2 right-2 p-1 hover:bg-white/20 rounded-full transition-colors"
+              className="absolute top-2.5 right-2.5 p-1 hover:bg-white/15 rounded-full transition-colors z-10"
               aria-label="Dismiss glow reminder"
             >
-              <X size={14} />
+              <X size={15} />
             </button>
 
-            <div className="flex gap-2.5 items-start">
-              <span className="text-lg shrink-0 leading-none mt-0.5">{tip.emoji ?? '✨'}</span>
-              <div className="min-w-0">
-                <p className="text-[9px] font-black uppercase tracking-wider text-white/75 flex items-center gap-1 mb-0.5">
-                  <Sparkles size={9} /> Glow reminder
-                </p>
-                <p className="font-bold text-xs leading-snug">{tip.title}</p>
-                <p className="text-[11px] text-white/90 mt-1 leading-relaxed line-clamp-3">
-                  {tip.message}
-                </p>
-              </div>
+            <div className="text-center mb-2">
+              <span className="text-2xl">{tip.emoji ?? accentEmoji}</span>
+              <p className="glow-popup-title text-amber-200/90 text-sm tracking-wide mt-1">
+                Glow · Reminder
+              </p>
             </div>
+
+            <p className="glow-popup-title text-lg text-white text-center leading-snug mb-2">
+              {tip.title}
+            </p>
+            <p className="glow-popup-message text-center text-white/85 italic">
+              &ldquo;{tip.message}&rdquo;
+            </p>
+
+            <p className="text-[9px] text-center text-white/40 uppercase tracking-[0.2em] mt-3 font-sans">
+              BLUMERA
+            </p>
           </div>
         </motion.div>
       )}

@@ -19,24 +19,24 @@ export default function ContactPage() {
 
       <div className="grid sm:grid-cols-2 gap-4">
         <a href={`tel:${BRAND.whatsappDisplay}`} className="bg-white border border-gray-100 rounded-2xl p-6 hover:border-pink-300 transition-all">
-          <Phone className="text-pink-500 mb-3" size={24} />
+          <Phone className="sf-icon-accent mb-3" size={24} />
           <p className="text-xs text-gray-400 uppercase font-bold mb-1">Call / Text</p>
           <p className="font-bold text-gray-900 text-lg">{BRAND.whatsappDisplay}</p>
         </a>
         <a href={`mailto:${BRAND.email}`} className="bg-white border border-gray-100 rounded-2xl p-6 hover:border-pink-300 transition-all">
-          <Mail className="text-pink-500 mb-3" size={24} />
+          <Mail className="sf-icon-accent mb-3" size={24} />
           <p className="text-xs text-gray-400 uppercase font-bold mb-1">Email</p>
           <p className="font-bold text-gray-900 text-sm break-all">{BRAND.email}</p>
         </a>
       </div>
 
       <div className="flex justify-center">
-        <ConnectButton className="bg-pink-500 text-white hover:bg-pink-400 shadow-lg shadow-pink-500/30" size="lg" />
+        <ConnectButton className="shadow-lg" size="lg" />
       </div>
 
       <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100">
         <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <Clock className="text-pink-500" size={20} /> Business Hours
+          <Clock className="sf-icon-accent" size={20} /> Business Hours
         </h3>
         <ul className="space-y-2 text-sm text-gray-600">
           <li>🕒 {BRAND.businessHours.weekdays}</li>
@@ -70,7 +70,7 @@ export default function ContactPage() {
 
       <div className="bg-white border border-gray-100 rounded-3xl p-8">
         <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-          <Truck className="text-pink-500" size={20} /> Delivery Information
+          <Truck className="sf-icon-accent" size={20} /> Delivery Information
         </h3>
         <p className="text-sm text-gray-600 leading-relaxed">
           🚚 Countrywide delivery available across Kenya.<br />
@@ -78,14 +78,14 @@ export default function ContactPage() {
         </p>
       </div>
 
-      <div className="bg-pink-50 border border-pink-100 rounded-3xl p-8">
+      <div className="sf-callout-box border rounded-3xl p-8">
         <h3 className="font-bold text-gray-900 mb-3">Customer Support</h3>
         <p className="text-sm text-gray-600 leading-relaxed">
           Need help choosing a wig, skincare product, or tracking an order? Our support team is ready to assist you
           with personalized recommendations and quick responses.
         </p>
         <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
-          <MapPin size={16} className="text-pink-500" /> {BRAND.location}
+          <MapPin size={16} className="sf-icon-accent" /> {BRAND.location}
         </div>
       </div>
     </div>

@@ -28,9 +28,9 @@ export default function BraidsShopSection({
   );
 
   return (
-    <section id="braids" className="scroll-mt-28 py-12 border-t border-pink-100/60">
+    <section id="braids" className="scroll-mt-28 py-12 border-t border-[var(--sf-accent-muted)]">
       <div className="mb-8">
-        <div className="inline-flex items-center gap-2 bg-rose-100 text-rose-700 rounded-full px-4 py-1.5 text-xs font-bold mb-4">
+        <div className="sf-section-badge inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-4">
           🎀 Braids Collection
         </div>
         <h2 className="text-3xl sm:text-4xl font-display font-bold text-gray-900 mb-2">
@@ -106,7 +106,7 @@ export default function BraidsShopSection({
                 <p className="text-base font-black text-gray-900">KSh {product.sellingPrice.toLocaleString()}</p>
                 <button
                   onClick={() => addToCart(product)}
-                  className="w-9 h-9 bg-gray-900 text-white rounded-xl flex items-center justify-center hover:bg-rose-600 transition-colors"
+                  className="sf-btn-primary w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
                 >
                   <Plus size={18} />
                 </button>
