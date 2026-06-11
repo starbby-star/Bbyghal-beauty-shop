@@ -4,7 +4,7 @@ import {
   ShoppingBag, Search, X, Plus, Minus, ShoppingCart,
   Heart, Sparkles, Star,
 } from 'lucide-react';
-import { Product, CartItem, PaymentMethod, Category, Member } from './types';
+import { Product, CartItem, PaymentMethod, Category, Member, HomePromoConfig } from './types';
 import { CATEGORIES } from './constants';
 import { BRAND, StorePage } from './constants/brand';
 import BraidsShopSection from './components/BraidsShopSection';
@@ -15,6 +15,9 @@ import ConnectButton from './components/storefront/ConnectButton';
 import OfferBanner from './components/storefront/OfferBanner';
 import HomePage from './components/storefront/HomePage';
 import HomeChatbot from './components/storefront/HomeChatbot';
+import GlowTipPopup from './components/storefront/GlowTipPopup';
+import PromoPrice from './components/storefront/PromoPrice';
+import { getActiveTheme, getActiveGlowTip, getEffectivePrice } from './utils/homePromos';
 import { getBraidStyle } from './utils/braidFilters';
 import { generateOrderNumber, openWhatsAppOrder } from './utils/whatsapp';
 import { WhatsAppCheckoutDetails } from './types';
@@ -54,6 +57,9 @@ interface StorefrontProps {
   setCheckoutPaymentMethod: (method: PaymentMethod) => void;
   handleCheckout: (details?: WhatsAppCheckoutDetails) => void;
   onAdminLoginClick: () => void;
+  homePromoConfig: HomePromoConfig;
+  promoSubtotal: number;
+  promoSavings: number;
 }
 
 const CATEGORY_ICONS: Partial<Record<Category, string>> = {
@@ -78,7 +84,10 @@ export default function Storefront({
   checkoutCustomerPhone, setCheckoutCustomerPhone,
   checkoutPaymentMethod, setCheckoutPaymentMethod,
   handleCheckout, onAdminLoginClick,
+  homePromoConfig, promoSubtotal, promoSavings,
 }: StorefrontProps) {
+  const activeTheme = getActiveTheme(homePromoConfig);
+  const glowTip = getActiveGlowTip(homePromoConfig);
   const [activePage, setActivePage] = React.useState<StorePage>('home');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<Category>('All');
@@ -110,6 +119,14 @@ export default function Storefront({
     setActivePage(page);
     if (category) setSelectedCategory(category);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const addPackageToCart = (productIds: string[]) => {
+    productIds.forEach((id) => {
+      const product = products.find((p) => p.id === id);
+      if (product) addToCart(product);
+    });
+    setIsCartOpen(true);
   };
 
   const toggleWishlist = (product: Product, e: React.MouseEvent) => {
@@ -201,7 +218,7 @@ export default function Storefront({
           ))}
         </div>
         <div className="flex items-center justify-between mt-auto">
-          <p className="text-base font-black">KSh {product.sellingPrice.toLocaleString()}</p>
+          <PromoPrice price={getEffectivePrice(product, homePromoConfig)} size="sm" />
           <button onClick={() => addToCart(product)} className="w-9 h-9 bg-black text-white rounded-xl flex items-center justify-center hover:bg-pink-500 transition-colors">
             <Plus size={18} />
           </button>
@@ -211,8 +228,14 @@ export default function Storefront({
   );
 
   return (
-    <div className="min-h-screen storefront-gradient flex flex-col font-sans text-gray-800">
-      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-xl border-b border-white/10">
+    <div className={`min-h-screen storefront-gradient flex flex-col font-sans text-gray-800 theme-${activeTheme}`}>
+      <header className={`sticky top-0 z-50 backdrop-blur-xl border-b ${
+        activeTheme === 'pink-thursday'
+          ? 'bg-gradient-to-r from-black via-pink-950/95 to-amber-950/90 border-amber-500/20'
+          : activeTheme === 'sellout-day'
+          ? 'bg-gradient-to-r from-amber-950/95 via-black to-black border-amber-400/20'
+          : 'bg-black/95 border-white/10'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-[72px] flex items-center justify-between gap-4">
           <button onClick={() => navigate('home')} className="flex items-center gap-3 text-left">
             <LogoImage />
@@ -259,14 +282,17 @@ export default function Storefront({
         </nav>
       </header>
 
-      <OfferBanner onNavigate={(page) => navigate(page)} />
+      <GlowTipPopup tip={glowTip} theme={activeTheme} />
+      <OfferBanner onNavigate={(page) => navigate(page)} homePromoConfig={homePromoConfig} />
 
       {activePage === 'home' && (
         <HomePage
           products={products}
+          homePromoConfig={homePromoConfig}
           onNavigate={navigate}
           onProductClick={setSelectedProduct}
           onAddToCart={addToCart}
+          onAddPackage={addPackageToCart}
         />
       )}
 
@@ -321,6 +347,8 @@ export default function Storefront({
       {activePage === 'home' && (
         <HomeChatbot
           member={member}
+          products={products}
+          homePromoConfig={homePromoConfig}
           onNavigate={navigate}
           onOpenCart={() => setIsCartOpen(true)}
         />
@@ -339,7 +367,9 @@ export default function Storefront({
                 <button onClick={() => setSelectedProduct(null)} className="float-right p-2"><X size={20} /></button>
                 <p className="text-xs font-bold text-pink-500 uppercase">{selectedProduct.brand}</p>
                 <h2 className="text-2xl font-display font-bold mb-2">{selectedProduct.name}</h2>
-                <p className="text-3xl font-black mb-4">KSh {selectedProduct.sellingPrice.toLocaleString()}</p>
+                <div className="mb-4">
+                  <PromoPrice price={getEffectivePrice(selectedProduct, homePromoConfig)} size="lg" />
+                </div>
                 {selectedProduct.category === 'Braids' && getBraidStyle(selectedProduct) && (
                   <p className="text-sm text-gray-500 mb-4">{getBraidStyle(selectedProduct)} · #{selectedProduct.colorNumber}</p>
                 )}
@@ -375,7 +405,7 @@ export default function Storefront({
                           <p className="font-bold text-sm line-clamp-1">{item.product.name}</p>
                           <p className="text-xs text-pink-500">{item.product.brand}</p>
                           <div className="flex justify-between items-center mt-2">
-                            <p className="font-black text-sm">KSh {item.product.sellingPrice}</p>
+                            <PromoPrice price={getEffectivePrice(item.product, homePromoConfig)} size="sm" />
                             <div className="flex items-center gap-2 border rounded-lg p-0.5">
                               <button onClick={() => updateCartQuantity(item.product.id, -1)}><Minus size={14} /></button>
                               <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
@@ -413,8 +443,10 @@ export default function Storefront({
               </div>
               {cart.length > 0 && (
                 <div className="p-5 border-t">
+                  <div className="flex justify-between mb-1"><span>Subtotal</span><span className="font-bold">KSh {promoSubtotal}</span></div>
+                  {promoSavings > 0 && <p className="text-sm text-pink-600 mb-1">Promo savings: -KSh {promoSavings}</p>}
+                  {cartDiscount > 0 && <p className="text-sm text-emerald-600 mb-2">Bundle discount: -KSh {cartDiscount}</p>}
                   <div className="flex justify-between mb-3"><span>Total</span><span className="text-xl font-black">KSh {cartTotal}</span></div>
-                  {cartDiscount > 0 && <p className="text-sm text-emerald-600 mb-2">Discount: -KSh {cartDiscount}</p>}
                   <button onClick={processWhatsAppCheckout} disabled={checkoutLoading}
                     className="w-full bg-pink-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-pink-400 disabled:opacity-60">
                     <Sparkles size={18} /> {checkoutLoading ? 'Preparing receipt...' : 'Connect & send order'}

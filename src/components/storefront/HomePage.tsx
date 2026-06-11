@@ -3,18 +3,28 @@ import { motion } from 'motion/react';
 import {
   ArrowRight, Flame, Sparkles, Star, Truck, Tag, ShoppingBag,
 } from 'lucide-react';
-import { Product, Category } from '../../types';
+import { Product, Category, HomePromoConfig } from '../../types';
 import { BRAND, StorePage } from '../../constants/brand';
 import { HOME_TRUST_BADGES } from '../../constants/home';
 import { LOW_STOCK_THRESHOLD } from '../../utils/inventory';
+import {
+  getActiveTheme,
+  getEffectivePrice,
+  getPinkThursdayPackages,
+  pinkThursdayTimeLeft,
+  selloutTimeLeft,
+} from '../../utils/homePromos';
 import ProductSlideshow from './ProductSlideshow';
 import ConnectButton from './ConnectButton';
+import PromoPrice from './PromoPrice';
 
 interface HomePageProps {
   products: Product[];
+  homePromoConfig: HomePromoConfig;
   onNavigate: (page: StorePage, category?: Category) => void;
   onProductClick: (product: Product) => void;
   onAddToCart: (product: Product) => void;
+  onAddPackage?: (productIds: string[]) => void;
 }
 
 const CATEGORY_QUICK: { cat: Category; emoji: string; label: string }[] = [
@@ -26,16 +36,31 @@ const CATEGORY_QUICK: { cat: Category; emoji: string; label: string }[] = [
 
 export default function HomePage({
   products,
+  homePromoConfig,
   onNavigate,
   onProductClick,
   onAddToCart,
+  onAddPackage,
 }: HomePageProps) {
   const inStock = products.filter((p) => p.stockQuantity > 0);
+  const theme = getActiveTheme(homePromoConfig);
+  const packages = getPinkThursdayPackages(homePromoConfig);
 
-  const sellOuts = inStock
-    .filter((p) => p.stockQuantity <= LOW_STOCK_THRESHOLD)
-    .sort((a, b) => a.stockQuantity - b.stockQuantity)
-    .slice(0, 8);
+  const adminSellouts = homePromoConfig.selloutProducts
+    .map((promo) => products.find((p) => p.id === promo.productId))
+    .filter((p): p is Product => Boolean(p && p.stockQuantity > 0));
+
+  const sellOuts =
+    theme === 'sellout-day' && adminSellouts.length > 0
+      ? adminSellouts
+      : inStock
+          .filter((p) => p.stockQuantity <= LOW_STOCK_THRESHOLD)
+          .sort((a, b) => a.stockQuantity - b.stockQuantity)
+          .slice(0, 8);
+
+  const pinkProducts = homePromoConfig.pinkThursdayProducts
+    .map((promo) => products.find((p) => p.id === promo.productId))
+    .filter((p): p is Product => Boolean(p && p.stockQuantity > 0));
 
   const newArrivals = [...inStock]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -56,12 +81,32 @@ export default function HomePage({
             transition={{ duration: 0.7 }}
             className="max-w-2xl"
           >
-            <div className="inline-flex items-center gap-2 bg-pink-500/20 border border-pink-500/40 rounded-full px-4 py-1.5 text-xs font-bold text-pink-300 mb-5">
+            {theme === 'pink-thursday' && (
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-amber-400 text-black rounded-full px-4 py-1.5 text-xs font-black mb-4 animate-pulse">
+                ✨ PINK THURSDAY LIVE {pinkThursdayTimeLeft(homePromoConfig) && `· ${pinkThursdayTimeLeft(homePromoConfig)}`}
+              </div>
+            )}
+            {theme === 'sellout-day' && (
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-400 to-white text-black rounded-full px-4 py-1.5 text-xs font-black mb-4">
+                🔥 SELLOUT DAY {selloutTimeLeft(homePromoConfig) && `· ${selloutTimeLeft(homePromoConfig)}`}
+              </div>
+            )}
+            <div className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold mb-5 ${
+              theme === 'pink-thursday'
+                ? 'bg-amber-500/20 border border-amber-400/40 text-amber-200'
+                : 'bg-pink-500/20 border border-pink-500/40 text-pink-300'
+            }`}>
               <Sparkles size={14} /> {BRAND.tagline}
             </div>
 
             <h2 className="text-4xl sm:text-6xl font-display font-bold mb-4 leading-tight">
-              {BRAND.systemName}
+              {theme === 'pink-thursday' ? (
+                <span className="bg-gradient-to-r from-pink-400 via-pink-300 to-amber-300 bg-clip-text text-transparent">
+                  {BRAND.systemName}
+                </span>
+              ) : (
+                BRAND.systemName
+              )}
             </h2>
             <p className="text-lg text-gray-300 mb-2">{BRAND.shopName}</p>
             <p className="text-gray-400 mb-8 max-w-lg leading-relaxed">
@@ -130,6 +175,63 @@ export default function HomePage({
         </div>
       </section>
 
+      {/* Pink Thursday packages */}
+      {theme === 'pink-thursday' && packages.length > 0 && (
+        <section className="bg-gradient-to-br from-pink-600 via-pink-500 to-amber-500 text-white py-14">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-8">
+              <p className="text-amber-200 text-xs font-black uppercase tracking-widest mb-2">Pink Thursday</p>
+              <h3 className="text-3xl font-display font-bold">Package deals</h3>
+              <p className="text-pink-100 text-sm mt-1">Bundle & glow — limited 24 hours</p>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {packages.map((pkg) => {
+                const pkgProducts = pkg.productIds
+                  .map((id) => products.find((p) => p.id === id))
+                  .filter((p): p is Product => Boolean(p));
+                return (
+                  <div key={pkg.id} className="bg-black/30 backdrop-blur border border-white/20 rounded-3xl p-5">
+                    <h4 className="font-bold text-lg mb-3">{pkg.label}</h4>
+                    <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar">
+                      {pkgProducts.map((p) => (
+                        <img key={p.id} src={p.imageUrl} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0" />
+                      ))}
+                    </div>
+                    <p className="text-3xl font-black text-amber-300 mb-1">KSh {pkg.packagePrice.toLocaleString()}</p>
+                    <p className="text-xs text-pink-200 mb-4">{pkg.productIds.length} products in this package</p>
+                    <button
+                      onClick={() => onAddPackage?.(pkg.productIds)}
+                      className="w-full py-3 bg-white text-pink-600 rounded-2xl font-bold hover:bg-amber-100 transition-colors"
+                    >
+                      Add package to bag
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Pink Thursday product deals */}
+      {theme === 'pink-thursday' && pinkProducts.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <h3 className="text-2xl font-display font-bold text-gray-900 mb-6">Pink Thursday picks</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {pinkProducts.map((product) => (
+              <article key={product.id} className="bg-white rounded-2xl border border-pink-100 overflow-hidden shadow-sm">
+                <img src={product.imageUrl} alt="" className="aspect-square object-cover w-full cursor-pointer" onClick={() => onProductClick(product)} />
+                <div className="p-3">
+                  <p className="font-bold text-xs line-clamp-2 mb-2">{product.name}</p>
+                  <PromoPrice price={getEffectivePrice(product, homePromoConfig)} size="sm" />
+                  <button onClick={() => onAddToCart(product)} className="mt-2 w-full py-2 bg-pink-500 text-white rounded-xl text-xs font-bold">Add</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Category quick links */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <h3 className="text-2xl font-display font-bold text-gray-900 mb-6">Shop by category</h3>
@@ -161,13 +263,17 @@ export default function HomePage({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-end justify-between mb-8 gap-4">
               <div>
-                <div className="inline-flex items-center gap-2 bg-rose-100 text-rose-700 rounded-full px-3 py-1 text-xs font-bold mb-3">
-                  <Flame size={14} /> Sell-outs
+                <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold mb-3 ${
+                  theme === 'sellout-day' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-700'
+                }`}>
+                  <Flame size={14} /> {theme === 'sellout-day' ? 'Sell-out day deals' : 'Sell-outs'}
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-display font-bold text-gray-900">
-                  Selling fast — limited stock
+                  {theme === 'sellout-day' ? 'Was / Now — today only!' : 'Selling fast — limited stock'}
                 </h3>
-                <p className="text-gray-500 text-sm mt-1">Grab these before they're gone</p>
+                <p className="text-gray-500 text-sm mt-1">
+                  {theme === 'sellout-day' ? selloutTimeLeft(homePromoConfig) ?? 'Grab reduced prices now' : "Grab these before they're gone"}
+                </p>
               </div>
               <button
                 onClick={() => onNavigate('shop')}
@@ -197,8 +303,10 @@ export default function HomePage({
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       referrerPolicy="no-referrer"
                     />
-                    <span className="absolute top-2 left-2 bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
-                      Only {product.stockQuantity} left
+                    <span className={`absolute top-2 left-2 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
+                      theme === 'sellout-day' ? 'bg-amber-500' : 'bg-rose-500'
+                    }`}>
+                      {theme === 'sellout-day' ? 'DEAL' : `Only ${product.stockQuantity} left`}
                     </span>
                   </div>
                   <div className="p-3">
@@ -209,11 +317,11 @@ export default function HomePage({
                     >
                       {product.name}
                     </h4>
-                    <div className="flex items-center justify-between">
-                      <p className="font-black text-sm">KSh {product.sellingPrice.toLocaleString()}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <PromoPrice price={getEffectivePrice(product, homePromoConfig)} size="sm" />
                       <button
                         onClick={() => onAddToCart(product)}
-                        className="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center hover:bg-pink-500 text-lg leading-none"
+                        className="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center hover:bg-pink-500 text-lg leading-none shrink-0"
                       >
                         +
                       </button>

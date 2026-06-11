@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutDashboard,
   Package,
   Users,
+  Home,
   ShoppingCart,
   BarChart3,
   Search,
@@ -43,6 +44,15 @@ import { Product, Category, Role, Sale, PaymentMethod, Seller, PaymentStatus, Ca
 import { openCustomerWhatsApp } from './utils/whatsapp';
 import WhatsAppIcon from './components/storefront/WhatsAppIcon';
 import { getAllMembers } from './utils/members';
+import HomePromoPanel from './components/admin/HomePromoPanel';
+import {
+  loadHomePromoConfig,
+  saveHomePromoConfig,
+  expireHomePromos,
+  cartUsesPromoPricing,
+  getEffectivePrice,
+} from './utils/homePromos';
+import { HomePromoConfig } from './types';
 import Storefront from './Storefront';
 import InventoryPanel from './components/InventoryPanel';
 import BraidsPanel from './components/BraidsPanel';
@@ -2283,8 +2293,29 @@ export default function App() {
   const [checkoutCustomerName, setCheckoutCustomerName] = useState('');
   const [checkoutCustomerPhone, setCheckoutCustomerPhone] = useState('');
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<PaymentMethod>('Mpesa');
+  const [homePromoConfig, setHomePromoConfig] = useState<HomePromoConfig>(() => loadHomePromoConfig());
 
   const ADMIN_PIN = '5063';
+
+  useEffect(() => {
+    const tick = () => {
+      setHomePromoConfig((prev) => {
+        const next = expireHomePromos(prev);
+        if (
+          next.pinkThursdayActive !== prev.pinkThursdayActive ||
+          next.selloutDayActive !== prev.selloutDayActive ||
+          next.pinkThursdayActiveUntil !== prev.pinkThursdayActiveUntil ||
+          next.selloutActiveUntil !== prev.selloutActiveUntil
+        ) {
+          return next;
+        }
+        return prev;
+      });
+    };
+    const interval = setInterval(tick, 30000);
+    tick();
+    return () => clearInterval(interval);
+  }, []);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -2329,7 +2360,12 @@ export default function App() {
   };
 
   const cartTotalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartSubtotal = cart.reduce((sum, item) => sum + (item.product.sellingPrice * item.quantity), 0);
+  const promoCart = useMemo(
+    () => cartUsesPromoPricing(cart, homePromoConfig),
+    [cart, homePromoConfig]
+  );
+  const cartSubtotal = promoCart.subtotal;
+  const promoSavings = promoCart.savings;
   const cartDiscount = cartTotalItems >= 3 ? 20 : (cartTotalItems >= 2 ? 10 : 0);
   const cartTotal = cartSubtotal - cartDiscount;
 
@@ -2354,9 +2390,10 @@ export default function App() {
         };
       }
 
-      const totalPrice = item.product.sellingPrice * item.quantity - itemDiscount;
+      const unitPrice = getEffectivePrice(item.product, homePromoConfig).current;
+      const totalPrice = unitPrice * item.quantity - itemDiscount;
       const totalProfit =
-        (item.product.sellingPrice - fifo.consumedBuyingPrice) * item.quantity - itemDiscount;
+        (unitPrice - fifo.consumedBuyingPrice) * item.quantity - itemDiscount;
 
       return {
         id: Math.random().toString(36).substr(2, 9),
@@ -2364,7 +2401,7 @@ export default function App() {
         productName: item.product.name,
         brand: item.product.brand,
         quantity: item.quantity,
-        sellingPrice: item.product.sellingPrice,
+        sellingPrice: unitPrice,
         buyingPrice: fifo.consumedBuyingPrice,
         profit: totalProfit,
         paymentMethod: whatsappDetails?.paymentMethod ?? checkoutPaymentMethod,
@@ -2752,6 +2789,7 @@ export default function App() {
     reports: 'Profit Reports',
     sales: 'Sales History',
     members: 'Members',
+    'home-promos': 'Home & Promos',
   };
 
   const NavItem = ({ id, icon: Icon, label }: { id: string; icon: React.ComponentType<{ size?: number }>; label: string }) => (
@@ -2819,6 +2857,9 @@ export default function App() {
             setCheckoutPaymentMethod={setCheckoutPaymentMethod}
             handleCheckout={handleCheckout}
             onAdminLoginClick={() => setShowLogin(true)}
+            homePromoConfig={homePromoConfig}
+            promoSubtotal={cartSubtotal}
+            promoSavings={promoSavings}
           />
           {/* Notification Toast */}
           <AnimatePresence>
@@ -3060,6 +3101,7 @@ export default function App() {
               <NavSection title="Management" />
               <NavItem id="inventory" icon={Package} label="Inventory" />
               <NavItem id="members" icon={UserRound} label="Members" />
+              <NavItem id="home-promos" icon={Home} label="Home & Promos" />
               <NavItem id="sellers" icon={Users} label="Sellers" />
               <NavSection title="Reports" />
               <NavItem id="summary" icon={TrendingUp} label="Sales Summary" />
@@ -4189,6 +4231,22 @@ export default function App() {
                     </tbody>
                   </table>
                 </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'home-promos' && role === 'admin' && (
+              <motion.div
+                key="home-promos"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+              >
+                <HomePromoPanel
+                  config={homePromoConfig}
+                  products={products}
+                  onSave={(cfg) => setHomePromoConfig(saveHomePromoConfig(cfg))}
+                  showNotification={showNotification}
+                />
               </motion.div>
             )}
 

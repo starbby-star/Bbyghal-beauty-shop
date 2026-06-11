@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, X, Sparkles, Send } from 'lucide-react';
-import { Member } from '../../types';
+import { Member, Product, HomePromoConfig, Category } from '../../types';
 import { getFirstName } from '../../utils/members';
 import { BRAND, INTEREST_OPTIONS, StorePage } from '../../constants/brand';
 import { CHATBOT_FAQ, CHATBOT_GREETINGS } from '../../constants/home';
-import { Category } from '../../types';
+import { getBeautyResponse } from '../../utils/beautyChat';
 
 interface ChatMessage {
   id: string;
@@ -15,12 +15,14 @@ interface ChatMessage {
 
 interface HomeChatbotProps {
   member: Member | null;
+  products: Product[];
+  homePromoConfig: HomePromoConfig;
   onNavigate: (page: StorePage, category?: Category) => void;
   onOpenCart?: () => void;
   visible?: boolean;
 }
 
-export default function HomeChatbot({ member, onNavigate, onOpenCart, visible = true }: HomeChatbotProps) {
+export default function HomeChatbot({ member, products, homePromoConfig, onNavigate, onOpenCart, visible = true }: HomeChatbotProps) {
   const [open, setOpen] = React.useState(false);
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
   const [input, setInput] = React.useState('');
@@ -34,7 +36,7 @@ export default function HomeChatbot({ member, onNavigate, onOpenCart, visible = 
     if (open && messages.length === 0) {
       setMessages([
         { id: 'greet', from: 'bot', text: greeting },
-        { id: 'help', from: 'bot', text: 'Tap a quick option below or ask me anything about products, offers, or delivery!' },
+        { id: 'help', from: 'bot', text: 'Ask me about skincare, wigs, braids, makeup, glow tips, Pink Thursday, or sell-out deals!' },
       ]);
     }
   }, [open, greeting, messages.length]);
@@ -75,6 +77,14 @@ export default function HomeChatbot({ member, onNavigate, onOpenCart, visible = 
 
     const lower = text.toLowerCase();
     setTimeout(() => {
+      const beautyReply = getBeautyResponse(text, products, homePromoConfig);
+      if (beautyReply) {
+        addBot(beautyReply);
+        if (lower.includes('order') || lower.includes('cart') || lower.includes('buy')) {
+          if (onOpenCart) onOpenCart();
+        }
+        return;
+      }
       if (lower.includes('offer') || lower.includes('discount') || lower.includes('deal')) {
         addBot(CHATBOT_FAQ.find((f) => f.id === 'offers')!.answer);
       } else if (lower.includes('deliver')) {
@@ -89,7 +99,7 @@ export default function HomeChatbot({ member, onNavigate, onOpenCart, visible = 
       } else if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
         addBot(greeting);
       } else {
-        addBot(`Thanks for reaching out! For the best help, browse our Shop or Braids pages, or Connect with us at ${BRAND.whatsappDisplay}.`);
+        addBot(`Thanks for reaching out! Ask me about beauty products, skincare routines, wigs, or our current deals. Or Connect with us at ${BRAND.whatsappDisplay}.`);
       }
     }, 500);
   };
@@ -172,7 +182,7 @@ export default function HomeChatbot({ member, onNavigate, onOpenCart, visible = 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ask about offers, delivery..."
+                placeholder="Ask about skincare, wigs, deals..."
                 className="flex-1 bg-white/10 border border-white/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-pink-500/50 placeholder:text-gray-500"
               />
               <button

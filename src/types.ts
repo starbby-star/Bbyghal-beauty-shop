@@ -131,3 +131,42 @@ export interface Member {
   lastOrderNumber?: string;
   joinedAt: string;
 }
+
+export type HomeTheme = 'default' | 'pink-thursday' | 'sellout-day';
+
+export interface PromoProductPrice {
+  productId: string;
+  originalPrice: number;
+  promoPrice: number;
+}
+
+export interface PinkThursdayPackage {
+  id: string;
+  label: string;
+  productIds: string[];
+  packagePrice: number;
+}
+
+export interface GlowTip {
+  id: string;
+  title: string;
+  message: string;
+  emoji?: string;
+}
+
+export interface HomePromoConfig {
+  selloutDayActive: boolean;
+  selloutActiveUntil?: string;
+  selloutProducts: PromoProductPrice[];
+  pinkThursdayActive: boolean;
+  pinkThursdayActiveUntil?: string;
+  /** Week numbers of the month (1–5) when Pink Thursday auto-activates on Thursday */
+  pinkThursdayWeeks: number[];
+  pinkThursdayProducts: PromoProductPrice[];
+  pinkThursdayPackages: PinkThursdayPackage[];
+  pinkThursdayTips: GlowTip[];
+  glowTips: GlowTip[];
+  activeGlowTipId?: string;
+  showGlowTipPopup: boolean;
+  updatedAt: string;
+}

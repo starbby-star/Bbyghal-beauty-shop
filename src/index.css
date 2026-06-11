@@ -47,3 +47,22 @@ html {
 .admin-main {
   background: #fafafa;
 }
+
+/* Promo day themes */
+.theme-pink-thursday {
+  --promo-accent: #d4a017;
+  --promo-glow: rgba(255, 20, 147, 0.15);
+}
+
+.theme-pink-thursday .blumera-pink-glow {
+  box-shadow: 0 0 40px rgba(255, 20, 147, 0.35), 0 0 20px rgba(212, 160, 23, 0.25);
+}
+
+.theme-sellout-day {
+  --promo-accent: #d4a017;
+  --promo-glow: rgba(212, 160, 23, 0.15);
+}
+
+.theme-sellout-day .storefront-gradient {
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 12%, #ffffff 100%);
+}
