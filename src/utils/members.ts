@@ -43,6 +43,7 @@ function mapRpcMember(data: Record<string, unknown>): Member {
     lastOrderAt: String(data.lastOrderAt ?? new Date().toISOString()),
     lastOrderNumber: data.lastOrderNumber ? String(data.lastOrderNumber) : undefined,
     joinedAt: String(data.joinedAt ?? new Date().toISOString()),
+    consentAt: data.consentAt ? String(data.consentAt) : undefined,
   };
 }
 
@@ -51,7 +52,10 @@ export async function saveMember(data: {
   phone: string;
   location?: string;
   orderNumber?: string;
-}): Promise<Member> {
+  consent: boolean;
+}): Promise<Member | null> {
+  if (!data.consent) return null;
+
   const phone = normalizePhone(data.phone);
   const name = sanitizeCustomerName(data.name);
   const location = data.location ? sanitizeSingleLine(data.location, 60) : undefined;
@@ -63,9 +67,11 @@ export async function saveMember(data: {
       p_name: name,
       p_location: location ?? null,
       p_order_number: data.orderNumber ?? null,
+      p_consent: true,
     });
-    if (!error && row) {
-      const member = mapRpcMember(row as Record<string, unknown>);
+    const result = row as Record<string, unknown> | null;
+    if (!error && result && result.success !== false) {
+      const member = mapRpcMember(result);
       localStorage.setItem(SESSION_KEY, phone);
       const local = readMembersLocal().filter((m) => m.phone !== phone);
       writeMembersLocal([...local, member]);
@@ -86,6 +92,7 @@ export async function saveMember(data: {
     lastOrderAt: now,
     lastOrderNumber: data.orderNumber,
     joinedAt: existing?.joinedAt ?? now,
+    consentAt: existing?.consentAt ?? now,
   };
 
   const updated = existing
@@ -95,6 +102,19 @@ export async function saveMember(data: {
   writeMembersLocal(updated);
   localStorage.setItem(SESSION_KEY, phone);
   return member;
+}
+
+export async function fetchMembersForAdmin(adminToken: string): Promise<Member[]> {
+  const supabase = getSupabase();
+  if (!supabase) return getAllMembers();
+
+  const { data, error } = await supabase.rpc('admin_list_members', { p_token: adminToken });
+  if (error) return getAllMembers();
+
+  const result = data as { success?: boolean; members?: Record<string, unknown>[] };
+  if (!result?.success || !Array.isArray(result.members)) return getAllMembers();
+
+  return result.members.map((m) => mapRpcMember(m));
 }
 
 export function getAllMembers(): Member[] {

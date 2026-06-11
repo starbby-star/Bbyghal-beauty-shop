@@ -112,6 +112,7 @@ export default function Storefront({
   const [member, setMember] = React.useState<Member | null>(null);
   const [showWelcome, setShowWelcome] = React.useState(false);
   const [checkoutLoading, setCheckoutLoading] = React.useState(false);
+  const [saveDetailsConsent, setSaveDetailsConsent] = React.useState(false);
 
   React.useEffect(() => {
     const returning = getReturningMember();
@@ -227,13 +228,16 @@ export default function Storefront({
 
       openWhatsAppOrderToAdmin(orderInput);
 
-      const saved = await saveMember({
-        name: details.customerName,
-        phone: details.customerPhone,
-        location: county,
-        orderNumber,
-      });
-      setMember(saved);
+      if (saveDetailsConsent) {
+        const saved = await saveMember({
+          name: details.customerName,
+          phone: details.customerPhone,
+          location: county,
+          orderNumber,
+          consent: true,
+        });
+        if (saved) setMember(saved);
+      }
 
       handleCheckout(details);
       setIsCartOpen(false);
@@ -478,6 +482,17 @@ export default function Storefront({
                           placeholder="07XX XXX XXX"
                           className="w-full mt-1 px-3 py-2.5 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-200" />
                       </div>
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={saveDetailsConsent}
+                          onChange={(e) => setSaveDetailsConsent(e.target.checked)}
+                          className="mt-0.5 rounded border-gray-300"
+                        />
+                        <span className="text-[11px] text-gray-500 leading-snug">
+                          Save my name &amp; number for faster checkout next time (stored securely on {BRAND.systemName} servers).
+                        </span>
+                      </label>
                       <div>
                         <label className="text-[10px] font-bold text-gray-400 uppercase">County</label>
                         <select value={county} onChange={(e) => setCounty(e.target.value)}

@@ -59,7 +59,7 @@ create or replace function verify_staff_pin(p_login_key text, p_pin text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_account staff_accounts%rowtype;
@@ -230,7 +230,7 @@ create or replace function admin_set_staff_pin(
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   if p_pin is null or length(trim(p_pin)) < 6 then

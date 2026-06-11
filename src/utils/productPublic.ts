@@ -1,4 +1,5 @@
 import { Product } from '../types';
+import { sanitizeImageUrl } from './sanitize';
 
 /** Storefront-safe product — no wholesale / FIFO cost data. */
 export interface PublicProduct {
@@ -33,9 +34,13 @@ export function toPublicProduct(product: Product): PublicProduct {
     firstPrice: _fp,
     lastPrice: _lp,
     stockUpdates: _su,
+    imageUrl,
     ...rest
   } = product;
-  return rest;
+  return {
+    ...rest,
+    imageUrl: sanitizeImageUrl(imageUrl),
+  };
 }
 
 export function toPublicProducts(products: Product[]): PublicProduct[] {

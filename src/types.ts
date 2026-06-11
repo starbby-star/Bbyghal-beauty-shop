@@ -139,6 +139,7 @@ export interface Member {
   lastOrderAt: string;
   lastOrderNumber?: string;
   joinedAt: string;
+  consentAt?: string;
 }
 
 export type HomeTheme = 'default' | 'pink-thursday' | 'sellout-day';

@@ -14,6 +14,7 @@ import {
   applyStockAddition,
   createProductWithBatch,
 } from '../utils/inventory';
+import { sanitizeProductText, safeImageUrl } from '../utils/sanitize';
 import BraidFilters, { BraidDetailFields } from './BraidFilters';
 import { BraidFilterState, emptyBraidFilters, filterBraidProducts, getBraidStyle } from '../utils/braidFilters';
 
@@ -122,20 +123,23 @@ export default function InventoryPanel({
 
     const base = {
       id: Math.random().toString(36).substr(2, 9),
-      name: newProductData.name,
-      brand: newProductData.brand,
+      name: sanitizeProductText(newProductData.name),
+      brand: sanitizeProductText(newProductData.brand),
       category: newProductData.category,
       sellerId: 's1',
       firstPrice: newProductData.buyingPrice,
       lastPrice: newProductData.buyingPrice,
       sellingPrice: newProductData.sellingPrice,
       isFixedPrice: true,
-      imageUrl: newProductData.imageUrl || `https://picsum.photos/seed/${newProductData.name}/400/400`,
+      imageUrl: safeImageUrl(
+        newProductData.imageUrl,
+        `https://picsum.photos/seed/${encodeURIComponent(newProductData.name)}/400/400`
+      ),
       createdAt: `${newProductData.dateAdded}T12:00:00.000Z`,
-      bestUsedBy: newProductData.bestUsedBy || undefined,
-      bestUsedWhen: newProductData.bestUsedWhen || undefined,
-      bestUsedWith: newProductData.bestUsedWith || undefined,
-      resultsAfter: newProductData.resultsAfter || undefined,
+      bestUsedBy: newProductData.bestUsedBy ? sanitizeProductText(newProductData.bestUsedBy) : undefined,
+      bestUsedWhen: newProductData.bestUsedWhen ? sanitizeProductText(newProductData.bestUsedWhen) : undefined,
+      bestUsedWith: newProductData.bestUsedWith ? sanitizeProductText(newProductData.bestUsedWith) : undefined,
+      resultsAfter: newProductData.resultsAfter ? sanitizeProductText(newProductData.resultsAfter) : undefined,
       braidStyle: newProductData.category === 'Braids' ? newProductData.braidStyle : undefined,
       braidLength: newProductData.category === 'Braids' ? newProductData.braidLength : undefined,
       braidType: newProductData.category === 'Braids' ? newProductData.braidStyle : undefined,

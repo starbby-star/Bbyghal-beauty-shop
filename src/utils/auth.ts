@@ -1,5 +1,6 @@
 import { Role } from '../types';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
+import { logStaffAction } from './audit';
 
 const SESSION_KEY = 'blumera_staff_session';
 const IDLE_MS = 30 * 60 * 1000;
@@ -174,6 +175,55 @@ export async function revokeSession(token?: string): Promise<void> {
   if (supabase && t) {
     await supabase.rpc('revoke_staff_session', { p_token: t });
   }
+}
+
+export function getStaffSessionToken(): string | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredSession;
+    return parsed.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function assertAdminSession(): Promise<
+  { ok: true; session: StaffSession } | { ok: false; error: string }
+> {
+  const session = await validateStoredSession();
+  if (!session) {
+    return { ok: false, error: 'Session expired — please sign in again' };
+  }
+  if (session.role !== 'admin') {
+    return { ok: false, error: 'Admin access required' };
+  }
+
+  const supabase = getSupabase();
+  if (supabase) {
+    const { data, error } = await supabase.rpc('validate_admin_session', {
+      p_token: session.token,
+    });
+    if (error || !(data as { valid?: boolean })?.valid) {
+      await revokeSession(session.token);
+      return { ok: false, error: 'Admin session invalid — please sign in again' };
+    }
+  }
+
+  return { ok: true, session };
+}
+
+export async function guardAdminAction(
+  action: string,
+  onDenied?: (msg: string) => void
+): Promise<StaffSession | null> {
+  const result = await assertAdminSession();
+  if (result.ok === false) {
+    onDenied?.(result.error);
+    return null;
+  }
+  void logStaffAction(action);
+  return result.session;
 }
 
 export function requireAdmin(role: Role | null, action: string): boolean {

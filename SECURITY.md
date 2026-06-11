@@ -2,7 +2,7 @@
 
 ## Overview
 
-Staff login uses **Supabase RPC** with bcrypt-hashed PINs (never stored in the frontend bundle). The storefront only receives **public product data** (no wholesale costs). Web orders reserve stock until an **admin confirms** the WhatsApp order.
+Staff login uses **Supabase RPC** with bcrypt-hashed PINs (never in the frontend bundle). Promos and members are stored server-side. The storefront only receives **public product data** (no wholesale costs).
 
 ## Cursor MCP (optional)
 
@@ -18,63 +18,56 @@ Staff login uses **Supabase RPC** with bcrypt-hashed PINs (never stored in the f
 }
 ```
 
-After adding, restart Cursor and approve the Supabase MCP connection when prompted. Agent skills: `.agents/skills/supabase` (installed via `npx skills add supabase/agent-skills`).
-
 ## BLUMERA Supabase project
 
 - **Dashboard:** https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu
 - **API URL:** `https://deiycrewvqvbgisrbglu.supabase.co`
 - **API keys:** https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu/settings/api
-- **SQL editor:** https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu/sql/new
 
-Copy the **anon public** key into `VITE_SUPABASE_ANON_KEY` (GitHub secret or local `.env`). Migrations `001`–`003` and staff PINs are applied on project `deiycrewvqvbgisrbglu`.
+Set `VITE_SUPABASE_ANON_KEY` in GitHub secrets or local `.env`.
 
-## 1. Supabase migration
+## Migrations (run in order)
 
-In the [SQL editor](https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu/sql/new), run:
+| File | Purpose |
+|------|---------|
+| `001_security.sql` | Staff auth, sessions, members, promo table |
+| `002_seed_staff_pins.sql` | Seed admin/employee PIN hashes |
+| `003_fix_pgcrypto_schema.sql` | Fix bcrypt on Supabase hosted DB |
+| `004_security_hardening.sql` | RLS, admin RPCs, audit log, consent |
 
-`supabase/migrations/001_security.sql`
+PINs are set via migration 002 or `npm run seed:pins` — **never commit real PINs to git**.
 
-This creates `staff_accounts`, `staff_sessions`, `members`, PIN verify/lockout functions, and member upsert.
+## Security features
 
-## 2. Seed staff PINs in Supabase
+### Authentication
+- Server-verified PINs (bcrypt), 5-attempt lockout, 8h session, 30min idle timeout
+- `staff_accounts` / `staff_sessions` blocked by RLS (RPC access only)
+- Admin actions re-validated via `validate_admin_session` RPC
 
-After `001_security.sql`, run in the Supabase SQL editor:
+### Data
+- Storefront: public products only (no cost/FIFO data)
+- Promos: `get_home_promo_config` / `admin_save_home_promo_config` (server source of truth)
+- Members: `admin_list_members` for admin panel; checkout requires **opt-in consent**
+- Audit log: privileged admin actions logged via `log_staff_action`
 
-`supabase/migrations/002_seed_staff_pins.sql`
+### Input & headers
+- Checkout/POS/WhatsApp field sanitization
+- Image URLs stripped of `data:` / non-HTTPS on storefront
+- `public/_headers` — CSP, X-Frame-Options, Referrer-Policy (Netlify/Cloudflare)
 
-This registers:
+### Employee rules
+- Staff POS: no manual discounts (Cash/M-Pesa at full price)
+- Online cart: system bundle only (KSh 10 @ 2+, KSh 20 @ 3+); braids excluded
+- Admin POS: optional manual discount (braids excluded)
 
-| Role | Login key | PIN |
-|------|-----------|-----|
-| Administrator | `admin` | `20473405` |
-| Employee 1 | `employee_1` | `506316` |
-| Employee 2 | `employee_2` | `200316` |
+## Deploy env vars
 
-PINs are stored as bcrypt hashes only — not in the frontend bundle.
+| Variable | Required |
+|----------|----------|
+| `VITE_SUPABASE_URL` | Yes |
+| `VITE_SUPABASE_ANON_KEY` | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | PIN rotation only |
 
-**Alternative (CI / rotate):** `npm run seed:pins` with `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_PIN` / `EMPLOYEE_1_PIN` / `EMPLOYEE_2_PIN` env vars.
+## Rotate PINs
 
-## 3. Set GitHub / deployment secrets
-
-| Secret | Purpose |
-|--------|---------|
-| `VITE_SUPABASE_URL` | Public Supabase URL (Vite build) |
-| `VITE_SUPABASE_ANON_KEY` | Anon key (Vite build) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Optional — PIN rotation via `seed:pins` |
-
-## 4. Employee discount rules
-
-- **Staff POS:** No manual discounts. Cash or M-Pesa at full price.
-- **Online shop:** System bundle only — KSh 10 off (2+ items), KSh 20 off (3+ items). **Braids excluded** from bundle count.
-- **Admin POS:** May apply manual discount (braids still excluded from admin discount helper).
-
-## 5. Session behaviour
-
-- 8-hour server session + 30-minute idle timeout
-- 5 failed PIN attempts → 15-minute lockout
-- Logout revokes session token on Supabase
-
-## 6. Rotate PINs
-
-Edit and re-run `002_seed_staff_pins.sql`, or re-run `npm run seed:pins` with new env PIN values.
+Re-run `002_seed_staff_pins.sql` or `npm run seed:pins` with new env values.

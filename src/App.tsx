@@ -43,21 +43,26 @@ import { BRAND } from './constants/brand';
 import { Product, Category, Role, Sale, PaymentMethod, Seller, PaymentStatus, CartItem, RequestedProduct, WhatsAppCheckoutDetails } from './types';
 import { openCustomerWhatsApp } from './utils/whatsapp';
 import WhatsAppIcon from './components/storefront/WhatsAppIcon';
-import { getAllMembers } from './utils/members';
+import { getAllMembers, fetchMembersForAdmin } from './utils/members';
 import {
   validateStoredSession,
   revokeSession,
   touchSession,
   requireAdmin,
+  guardAdminAction,
+  getStaffSessionToken,
   StaffLoginKey,
 } from './utils/auth';
 import { calcWebCartDiscount, calcPosEmployeeDiscount, calcPosAdminDiscount } from './utils/discounts';
+import { sanitizeCustomerName, sanitizePhone } from './utils/sanitize';
 import { toPublicProducts, PublicProduct } from './utils/productPublic';
 import PinLogin from './components/admin/PinLogin';
 import HomePromoPanel from './components/admin/HomePromoPanel';
 import {
   loadHomePromoConfig,
   saveHomePromoConfig,
+  fetchHomePromoConfig,
+  persistHomePromoConfig,
   expireHomePromos,
   cartUsesPromoPricing,
   getEffectivePrice,
@@ -2300,8 +2305,24 @@ export default function App() {
   const [checkoutCustomerPhone, setCheckoutCustomerPhone] = useState('');
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<PaymentMethod>('Mpesa');
   const [homePromoConfig, setHomePromoConfig] = useState<HomePromoConfig>(() => loadHomePromoConfig());
+  const [adminMembers, setAdminMembers] = useState<ReturnType<typeof getAllMembers>>([]);
 
   const publicProducts = useMemo(() => toPublicProducts(products), [products]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchHomePromoConfig().then((cfg) => {
+      if (!cancelled) setHomePromoConfig(cfg);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'members' || role !== 'admin') return;
+    const token = getStaffSessionToken();
+    if (!token) return;
+    fetchMembersForAdmin(token).then(setAdminMembers);
+  }, [activeTab, role, isAuthenticated]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2494,11 +2515,9 @@ export default function App() {
     );
   };
 
-  const handleConfirmWhatsAppOrder = (orderNumber: string) => {
-    if (!requireAdmin(role, 'confirm WhatsApp order')) {
-      showNotification('Only admin can confirm web orders', 'error');
-      return;
-    }
+  const handleConfirmWhatsAppOrder = async (orderNumber: string) => {
+    const session = await guardAdminAction('confirm_whatsapp_order', showNotification);
+    if (!session) return;
     const orderLines = sales.filter((s) => s.orderNumber === orderNumber);
     if (!orderLines.length) return;
 
@@ -2725,8 +2744,8 @@ export default function App() {
       staffId: 'u1',
       staffName: activeEmployee || 'Staff',
       sellerName: role === 'admin' ? selectedSeller : (activeEmployee || selectedSeller),
-      customerName: customerName.trim() || undefined,
-      customerPhone: customerPhone.trim() || undefined,
+      customerName: sanitizeCustomerName(customerName.trim()) || undefined,
+      customerPhone: sanitizePhone(customerPhone.trim()) || undefined,
       discount: appliedDiscount > 0 ? appliedDiscount : undefined,
       createdAt: new Date().toISOString(),
     };
@@ -2752,11 +2771,9 @@ export default function App() {
     setReceiptSale(newSale); // Show receipt after sale
   };
 
-  const handleClearDebt = (saleId: string) => {
-    if (!requireAdmin(role, 'clear debt')) {
-      showNotification('Only admin can clear debts', 'error');
-      return;
-    }
+  const handleClearDebt = async (saleId: string) => {
+    const session = await guardAdminAction('clear_debt', showNotification);
+    if (!session) return;
     setSales(sales.map(s => {
       if (s.id === saleId) {
         return {
@@ -2776,7 +2793,9 @@ export default function App() {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const handleSaveSeller = () => {
+  const handleSaveSeller = async () => {
+    const session = await guardAdminAction('save_seller', showNotification);
+    if (!session) return;
     if (!sellerFormData.name || !sellerFormData.productName) return;
 
     if (editingSeller) {
@@ -2800,7 +2819,9 @@ export default function App() {
     setSellerFormData({ name: '', productName: '', amount: 0, contact: '', whatsappNumber: '' });
   };
 
-  const handleDeleteSeller = (id: string) => {
+  const handleDeleteSeller = async (id: string) => {
+    const session = await guardAdminAction('delete_seller', showNotification);
+    if (!session) return;
     setConfirmDialog({
       message: 'Are you sure you want to delete this wholesaler?',
       onConfirm: () => {
@@ -2811,7 +2832,9 @@ export default function App() {
     });
   };
 
-  const handleAddAgent = () => {
+  const handleAddAgent = async () => {
+    const session = await guardAdminAction('save_agent', showNotification);
+    if (!session) return;
     if (!newAgentName.trim()) return;
 
     if (editingAgent) {
@@ -2838,7 +2861,9 @@ export default function App() {
     setEditingAgent(null);
   };
 
-  const handleDeleteAgent = (name: string) => {
+  const handleDeleteAgent = async (name: string) => {
+    const session = await guardAdminAction('delete_agent', showNotification);
+    if (!session) return;
     if (name === 'Staff') {
       showNotification('Cannot delete the default Staff agent');
       return;
@@ -4201,7 +4226,15 @@ export default function App() {
                 <HomePromoPanel
                   config={homePromoConfig}
                   products={products}
-                  onSave={(cfg) => setHomePromoConfig(saveHomePromoConfig(cfg))}
+                  onSave={async (cfg) => {
+                    try {
+                      const token = getStaffSessionToken();
+                      const saved = await persistHomePromoConfig(cfg, token);
+                      setHomePromoConfig(saved);
+                    } catch (e) {
+                      showNotification(e instanceof Error ? e.message : 'Failed to save promos', 'error');
+                    }
+                  }}
                   showNotification={showNotification}
                 />
               </motion.div>
@@ -4233,7 +4266,7 @@ export default function App() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-pink-50">
-                        {getAllMembers()
+                        {(adminMembers.length ? adminMembers : getAllMembers())
                           .sort((a, b) => b.lastOrderAt.localeCompare(a.lastOrderAt))
                           .map((member) => (
                             <tr key={member.id} className="hover:bg-pink-50/30 transition-colors">
@@ -4262,7 +4295,7 @@ export default function App() {
                               </td>
                             </tr>
                           ))}
-                        {getAllMembers().length === 0 && (
+                        {(adminMembers.length ? adminMembers : getAllMembers()).length === 0 && (
                           <tr>
                             <td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">
                               No members yet — they appear after the first Connect checkout.

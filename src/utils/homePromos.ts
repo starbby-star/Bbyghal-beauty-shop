@@ -105,23 +105,68 @@ export function loadHomePromoConfig(): HomePromoConfig {
     const raw = localStorage.getItem(STORAGE_KEY);
     const parsed = raw ? (JSON.parse(raw) as HomePromoConfig) : DEFAULT_HOME_PROMO_CONFIG;
     const expired = expireHomePromos({ ...DEFAULT_HOME_PROMO_CONFIG, ...parsed });
-    writeHomePromoConfig(expired);
+    writeHomePromoConfigLocal(expired);
     return expired;
   } catch {
     return DEFAULT_HOME_PROMO_CONFIG;
   }
 }
 
-export function writeHomePromoConfig(config: HomePromoConfig): void {
+function writeHomePromoConfigLocal(config: HomePromoConfig): void {
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({ ...config, updatedAt: new Date().toISOString() })
   );
 }
 
+export async function fetchHomePromoConfig(): Promise<HomePromoConfig> {
+  const { getSupabase } = await import('../lib/supabase');
+  const supabase = getSupabase();
+  if (!supabase) return loadHomePromoConfig();
+
+  const { data, error } = await supabase.rpc('get_home_promo_config');
+  if (error || !data || (typeof data === 'object' && Object.keys(data as object).length === 0)) {
+    return loadHomePromoConfig();
+  }
+
+  const merged = expireHomePromos({
+    ...DEFAULT_HOME_PROMO_CONFIG,
+    ...(data as HomePromoConfig),
+  });
+  writeHomePromoConfigLocal(merged);
+  return merged;
+}
+
+export function writeHomePromoConfig(config: HomePromoConfig): void {
+  writeHomePromoConfigLocal(config);
+}
+
+export async function persistHomePromoConfig(
+  config: HomePromoConfig,
+  adminToken?: string | null
+): Promise<HomePromoConfig> {
+  const next = expireHomePromos(config);
+  writeHomePromoConfigLocal(next);
+
+  const { getSupabase } = await import('../lib/supabase');
+  const supabase = getSupabase();
+  if (supabase && adminToken) {
+    const { data, error } = await supabase.rpc('admin_save_home_promo_config', {
+      p_token: adminToken,
+      p_config: next,
+    });
+    const result = data as { success?: boolean; error?: string };
+    if (error || result?.success === false) {
+      throw new Error(result?.error ?? 'Failed to save promos to server');
+    }
+  }
+
+  return next;
+}
+
 export function saveHomePromoConfig(config: HomePromoConfig): HomePromoConfig {
   const next = expireHomePromos(config);
-  writeHomePromoConfig(next);
+  writeHomePromoConfigLocal(next);
   return next;
 }
 

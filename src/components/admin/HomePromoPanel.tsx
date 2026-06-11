@@ -15,7 +15,7 @@ import PinkThursdayPackageBuilder from './PinkThursdayPackageBuilder';
 interface HomePromoPanelProps {
   config: HomePromoConfig;
   products: Product[];
-  onSave: (config: HomePromoConfig) => void;
+  onSave: (config: HomePromoConfig) => void | Promise<void>;
   showNotification: (msg: string, type?: 'error' | 'success') => void;
 }
 
