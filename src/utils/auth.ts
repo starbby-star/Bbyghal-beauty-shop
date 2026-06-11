@@ -7,10 +7,10 @@ const IDLE_MS = 30 * 60 * 1000;
 
 export type StaffLoginKey = 'admin' | 'employee_1' | 'employee_2';
 
-export const LOGIN_TARGETS: { key: StaffLoginKey; label: string; description: string }[] = [
-  { key: 'employee_1', label: 'Employee 1', description: 'Record sales · check stock' },
-  { key: 'employee_2', label: 'Employee 2', description: 'Record sales · check stock' },
-  { key: 'admin', label: 'Administrator', description: 'Full system access' },
+export const LOGIN_TARGETS: { key: StaffLoginKey; label: string }[] = [
+  { key: 'admin', label: 'Admin' },
+  { key: 'employee_1', label: 'Staff 1' },
+  { key: 'employee_2', label: 'Staff 2' },
 ];
 
 export interface StaffSession {

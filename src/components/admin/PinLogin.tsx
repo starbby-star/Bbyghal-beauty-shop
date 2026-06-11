@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Users, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Lock, Users, ChevronLeft } from 'lucide-react';
 import {
   LOGIN_TARGETS,
   StaffLoginKey,
@@ -13,9 +13,9 @@ const PIN_MIN = 6;
 const PIN_MAX = 8;
 
 const TARGET_ICONS: Record<StaffLoginKey, React.ReactNode> = {
-  employee_1: <Users size={24} />,
-  employee_2: <Users size={24} />,
-  admin: <Lock size={24} />,
+  employee_1: <Users size={20} />,
+  employee_2: <Users size={20} />,
+  admin: <Lock size={20} />,
 };
 
 interface PinLoginProps {
@@ -28,6 +28,7 @@ export default function PinLogin({ onSuccess, onError }: PinLoginProps) {
   const [target, setTarget] = React.useState<StaffLoginKey | null>(null);
   const [pin, setPin] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const targetMeta = LOGIN_TARGETS.find((t) => t.key === target);
 
@@ -39,6 +40,7 @@ export default function PinLogin({ onSuccess, onError }: PinLoginProps) {
       if (result.ok === false) {
         onError(result.error);
         setPin('');
+        inputRef.current?.focus();
         return;
       }
       onSuccess({
@@ -52,20 +54,18 @@ export default function PinLogin({ onSuccess, onError }: PinLoginProps) {
     }
   };
 
-  const appendDigit = (digit: number) => {
-    if (loading || pin.length >= PIN_MAX) return;
-    setPin((p) => p + String(digit));
-  };
-
   const canSubmit = pin.length >= PIN_MIN && pin.length <= PIN_MAX;
+
+  React.useEffect(() => {
+    if (mode === 'pin') inputRef.current?.focus();
+  }, [mode]);
 
   if (!authConfigured()) {
     return (
-      <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-900">
-        <p className="font-bold mb-2">Staff sign-in unavailable</p>
-        <p className="text-amber-800">
-          Supabase is not configured. Set <code className="text-xs">VITE_SUPABASE_URL</code> and{' '}
-          <code className="text-xs">VITE_SUPABASE_ANON_KEY</code>, then rebuild the app.
+      <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-900 text-left">
+        <p className="font-bold mb-1">Staff sign-in unavailable</p>
+        <p className="text-amber-800 text-xs">
+          Supabase is not configured. Rebuild with valid API credentials.
         </p>
       </div>
     );
@@ -76,10 +76,10 @@ export default function PinLogin({ onSuccess, onError }: PinLoginProps) {
       {mode === 'select' ? (
         <motion.div
           key="select"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          className="space-y-4"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          className="grid gap-2"
         >
           {LOGIN_TARGETS.map((item) => (
             <button
@@ -90,93 +90,56 @@ export default function PinLogin({ onSuccess, onError }: PinLoginProps) {
                 setMode('pin');
                 setPin('');
               }}
-              className="w-full flex items-center justify-between p-6 bg-pink-50 rounded-3xl hover:bg-pink-100 transition-all group"
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-pink-50 text-pink-700 font-bold hover:bg-pink-100 active:scale-[0.98] transition-all"
             >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-pink-500 shadow-sm">
-                  {TARGET_ICONS[item.key]}
-                </div>
-                <div className="text-left">
-                  <p className="font-black text-gray-800">{item.label}</p>
-                  <p className="text-xs text-gray-400">{item.description}</p>
-                </div>
-              </div>
-              <ChevronRight className="text-pink-300 group-hover:text-pink-500 transition-colors" />
+              <span className="text-pink-500">{TARGET_ICONS[item.key]}</span>
+              {item.label}
             </button>
           ))}
         </motion.div>
       ) : (
         <motion.div
           key="pin"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          className="space-y-6"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          className="space-y-4"
         >
-          <div className="flex items-center gap-2 mb-4">
-            <button
-              type="button"
-              onClick={() => {
-                setMode('select');
-                setPin('');
-              }}
-              className="p-2 hover:bg-gray-100 rounded-xl text-gray-400"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <p className="text-gray-500 font-medium">
-              Enter PIN for {targetMeta?.label ?? 'staff'} ({PIN_MIN}–{PIN_MAX} digits)
-            </p>
-          </div>
-
-          <div className="flex justify-center gap-2 flex-wrap max-w-xs mx-auto">
-            {Array.from({ length: PIN_MAX }).map((_, i) => (
-              <div
-                key={i}
-                className={`w-10 h-12 rounded-xl border-2 flex items-center justify-center text-xl font-black transition-all ${
-                  pin.length > i ? 'border-pink-500 bg-pink-50 text-pink-600' : 'border-pink-100 text-gray-200'
-                }`}
-              >
-                {pin.length > i ? '•' : ''}
-              </div>
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('select');
+              setPin('');
+            }}
+            className="flex items-center gap-1 text-sm text-gray-400 hover:text-pink-500 transition-colors mx-auto"
+          >
+            <ChevronLeft size={16} />
+            {targetMeta?.label}
+          </button>
 
           <input
+            ref={inputRef}
             type="password"
             inputMode="numeric"
+            autoComplete="off"
             maxLength={PIN_MAX}
             value={pin}
+            placeholder="PIN"
+            disabled={loading}
             onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, PIN_MAX))}
-            autoFocus
-            className="absolute opacity-0 pointer-events-none"
-            aria-hidden
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && canSubmit && !loading) void submitPin(pin);
+            }}
+            className="w-full text-center text-2xl tracking-[0.35em] py-4 px-4 rounded-2xl border-2 border-pink-100 focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-100 font-bold text-gray-800 placeholder:tracking-normal placeholder:text-base placeholder:font-medium placeholder:text-gray-300"
           />
 
-          <div className="grid grid-cols-3 gap-3 pt-2">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, '←'].map((num, i) => (
-              <button
-                key={i}
-                type="button"
-                disabled={loading}
-                onClick={() => {
-                  if (num === 'C') setPin('');
-                  else if (num === '←') setPin((p) => p.slice(0, -1));
-                  else if (typeof num === 'number') appendDigit(num);
-                }}
-                className="h-14 rounded-2xl bg-pink-50 text-lg font-black text-pink-600 hover:bg-pink-100 active:scale-95 transition-all disabled:opacity-50"
-              >
-                {num}
-              </button>
-            ))}
-          </div>
           <button
             type="button"
             disabled={!canSubmit || loading}
             onClick={() => void submitPin(pin)}
-            className="w-full py-3 rounded-2xl bg-pink-500 text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full py-3.5 rounded-2xl bg-pink-500 text-white font-bold hover:bg-pink-600 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {loading ? 'Verifying…' : 'Unlock'}
+            {loading ? 'Signing in…' : 'Continue'}
           </button>
         </motion.div>
       )}

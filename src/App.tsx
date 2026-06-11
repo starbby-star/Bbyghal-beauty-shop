@@ -3027,7 +3027,6 @@ export default function App() {
           <p className="text-pink-500 font-bold text-sm tracking-wide mb-1">{BRAND.tagline}</p>
           <p className="text-gray-500 font-medium text-lg mb-8">{BRAND.shopName}</p>
 
-          <p className="text-gray-500 mb-4 font-medium text-sm">Secure sign-in · PINs verified on Supabase</p>
           <PinLogin
             onSuccess={({ role: r, displayName, loginKey }: { role: Role; displayName: string; loginKey: StaffLoginKey }) => {
               setRole(r);
