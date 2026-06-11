@@ -4,9 +4,18 @@
 
 Staff login uses **Supabase RPC** with bcrypt-hashed PINs (never stored in the frontend bundle). The storefront only receives **public product data** (no wholesale costs). Web orders reserve stock until an **admin confirms** the WhatsApp order.
 
+## BLUMERA Supabase project
+
+- **Dashboard:** https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu
+- **API URL:** `https://deiycrewvqvbgisrbglu.supabase.co`
+- **API keys:** https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu/settings/api
+- **SQL editor:** https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu/sql/new
+
+Copy the **anon public** key into `VITE_SUPABASE_ANON_KEY` (GitHub secret or local `.env`).
+
 ## 1. Supabase migration
 
-In the [Supabase SQL editor](https://supabase.com/dashboard), run:
+In the [SQL editor](https://supabase.com/dashboard/project/deiycrewvqvbgisrbglu/sql/new), run:
 
 `supabase/migrations/001_security.sql`
 
